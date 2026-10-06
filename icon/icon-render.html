@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+  html, body { margin: 0; padding: 0; background: #e8e8ec; }
+  .wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 20px; }
+  .label { font: 14px -apple-system, sans-serif; color: #555; }
+  .icon { width: 1024px; height: 1024px; display: block; }
+  /* 单图标模式：?only=A / ?only=B，无 padding 直接输出 1024 */
+  body.solo .wrap { padding: 0; gap: 0; }
+  body.solo .label { display: none; }
+  body.solo svg.icon { width: 1024px; height: 1024px; }
+  body.solo .hide { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="label">方案 A：环中猫娘（头像 + 进度环）</div>
+  <svg id="iconA" class="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="gA" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0"   stop-color="#ffc3de"/>
+        <stop offset=".45" stop-color="#f2a8d6"/>
+        <stop offset="1"   stop-color="#b287ef"/>
+      </linearGradient>
+      <linearGradient id="gArc" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="1" stop-color="#ffe3f1"/>
+      </linearGradient>
+      <filter id="fShadow" x="-20%" y="-20%" width="140%" height="150%">
+        <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#7a4b98" flood-opacity=".28"/>
+      </filter>
+      <filter id="fSoft" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#8a55aa" flood-opacity=".22"/>
+      </filter>
+      <clipPath id="squircleA"><path id="sqPathA"/></clipPath>
+      <clipPath id="avatarClip"><circle cx="512" cy="468" r="272"/></clipPath>
+      <!-- SWEEP 自设计镂空字形：几何圆体中线 + mask 掏空芯部 -->
+      <g id="sweepGlyphs">
+        <path d="M 67 32 C 67 18, 17 18, 17 35 C 17 51, 67 45, 67 62 C 67 79, 17 79, 17 64"/>
+        <path d="M 115 22 L 115 60 A 20 20 0 0 0 155 60 L 155 22"/>
+        <path d="M 155 22 L 155 60 A 20 20 0 0 0 195 60 L 195 22"/>
+        <path d="M 243 22 L 243 78 M 243 22 L 289 22 M 243 50 L 279 50 M 243 78 L 289 78"/>
+        <path d="M 337 22 L 337 78 M 337 22 L 383 22 M 337 50 L 373 50 M 337 78 L 383 78"/>
+        <path d="M 431 78 L 431 22 L 469 22 A 19 19 0 0 1 469 60 L 431 60"/>
+      </g>
+      <mask id="sweepHollow" maskUnits="userSpaceOnUse" x="-40" y="-60" width="580" height="220">
+        <rect x="-40" y="-60" width="580" height="220" fill="#fff"/>
+        <use href="#sweepGlyphs" fill="none" stroke="#000" stroke-width="20"
+             stroke-linecap="round" stroke-linejoin="round"/>
+      </mask>
+      <!-- SWEEP 粉色描边渐变（上浅粉 → 下玫红） -->
+      <linearGradient id="gSweepWord" gradientUnits="userSpaceOnUse" x1="0" y1="6" x2="0" y2="94">
+        <stop offset="0"    stop-color="#ffd3ea"/>
+        <stop offset=".42"  stop-color="#ff9ecb"/>
+        <stop offset="1"    stop-color="#f2549b"/>
+      </linearGradient>
+      <!-- 内层：白色柔光，把粉字从粉紫底上"托"出来 -->
+      <filter id="fWordGlow" x="-30%" y="-70%" width="160%" height="260%">
+        <feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#ffffff" flood-opacity=".80"/>
+      </filter>
+      <!-- 外层：玫红投影 -->
+      <filter id="fWordShadow" x="-30%" y="-70%" width="160%" height="270%">
+        <feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#a33373" flood-opacity=".45"/>
+      </filter>
+    </defs>
+
+    <!-- squircle 主体 + 投影 -->
+    <g filter="url(#fShadow)">
+      <path id="sqBodyA" fill="url(#gA)"/>
+    </g>
+    <!-- 内侧高光描边 -->
+    <path id="sqRimA" fill="none" stroke="#ffffff" stroke-opacity=".38" stroke-width="3"/>
+
+    <!-- 进度轨道（淡）+ 进度弧（亮） -->
+    <g filter="url(#fSoft)">
+      <circle cx="512" cy="468" r="308" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="26"/>
+      <circle cx="512" cy="468" r="308" fill="none" stroke="url(#gArc)" stroke-width="26"
+              stroke-linecap="round"
+              stroke-dasharray="1451.4 1935.2"
+              transform="rotate(-90 512 468)"/>
+      <!-- 头像圆 -->
+      <circle cx="512" cy="468" r="272" fill="#fdfcfc"/>
+      <image href="../prototype/assets/icon-avatar.jpg" x="128" y="177" width="768" height="768"
+             preserveAspectRatio="xMidYMid slice" clip-path="url(#avatarClip)"/>
+    </g>
+
+    <!-- 点缀星星 -->
+    <g fill="#ffffff">
+      <path d="M790 218 l13 33 33 13 -33 13 -13 33 -13 -33 -33 -13 33 -13 z" opacity=".95"/>
+      <path d="M232 764 l9 22 22 9 -22 9 -9 22 -9 -22 -22 -9 22 -9 z" opacity=".8"/>
+      <path d="M300 190 l6 15 15 6 -15 6 -6 15 -6 -15 -15 -6 15 -6 z" opacity=".65"/>
+    </g>
+
+    <!-- 底部 SWEEP 镂空字（自设计几何圆体 · 粉色描边 + 白柔光 + 投影） -->
+    <g filter="url(#fWordShadow)">
+      <g filter="url(#fWordGlow)">
+        <g transform="translate(512 846) scale(0.95) translate(-252.5 -50)">
+          <use href="#sweepGlyphs" mask="url(#sweepHollow)" fill="none"
+               stroke="url(#gSweepWord)" stroke-width="34"
+               stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+      </g>
+    </g>
+  </svg>
+
+  <div class="label">方案 B：猫爪清扫（符号化）</div>
+  <svg id="iconB" class="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="gB" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0"   stop-color="#ffc3de"/>
+        <stop offset=".45" stop-color="#f2a8d6"/>
+        <stop offset="1"   stop-color="#b287ef"/>
+      </linearGradient>
+      <linearGradient id="gSweep" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#ffffff" stop-opacity=".25"/>
+        <stop offset="1" stop-color="#ffffff" stop-opacity=".95"/>
+      </linearGradient>
+      <filter id="fShadowB" x="-20%" y="-20%" width="140%" height="150%">
+        <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#7a4b98" flood-opacity=".28"/>
+      </filter>
+      <clipPath id="squircleB"><path id="sqPathB"/></clipPath>
+    </defs>
+
+    <g filter="url(#fShadowB)">
+      <path id="sqBodyB" fill="url(#gB)"/>
+    </g>
+    <path id="sqRimB" fill="none" stroke="#ffffff" stroke-opacity=".38" stroke-width="3"/>
+
+    <!-- 清扫弧线 -->
+    <path d="M 285 745 A 320 320 0 0 1 705 285" fill="none" stroke="url(#gSweep)"
+          stroke-width="26" stroke-linecap="round"/>
+
+    <!-- 猫爪印 -->
+    <g fill="#ffffff" transform="rotate(-10 512 520)">
+      <ellipse cx="512" cy="560" rx="150" ry="128"/>
+      <ellipse cx="352" cy="404" rx="52" ry="66" transform="rotate(-18 352 404)"/>
+      <ellipse cx="458" cy="352" rx="52" ry="68"/>
+      <ellipse cx="566" cy="352" rx="52" ry="68"/>
+      <ellipse cx="672" cy="404" rx="52" ry="66" transform="rotate(18 672 404)"/>
+    </g>
+
+    <!-- 星光 -->
+    <g fill="#ffffff">
+      <path d="M760 700 l14 36 36 14 -36 14 -14 36 -14 -36 -36 -14 36 -14 z" opacity=".95"/>
+      <path d="M270 300 l9 22 22 9 -22 9 -9 22 -9 -22 -22 -9 22 -9 z" opacity=".8"/>
+    </g>
+  </svg>
+</div>
+
+<script>
+  // Apple 风格超椭圆 squircle：n=5，内容区 824×824 居中（四边留 100px）
+  function squirclePath(cx, cy, a, n = 5, steps = 256) {
+    const pts = [];
+    for (let i = 0; i < steps; i++) {
+      const t = (i / steps) * Math.PI * 2;
+      const c = Math.cos(t), s = Math.sin(t);
+      const x = cx + a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n);
+      const y = cy + a * Math.sign(s) * Math.pow(Math.abs(s), 2 / n);
+      pts.push([x, y]);
+    }
+    return 'M' + pts.map(p => p[0].toFixed(2) + ' ' + p[1].toFixed(2)).join('L') + 'Z';
+  }
+  const d = squirclePath(512, 512, 412);
+  for (const id of ['sqPathA', 'sqPathB', 'sqBodyA', 'sqBodyB']) {
+    document.getElementById(id).setAttribute('d', d);
+  }
+  for (const id of ['sqRimA', 'sqRimB']) {
+    const el = document.getElementById(id);
+    el.setAttribute('d', squirclePath(512, 512, 410));
+  }
+
+  // 单图标模式
+  const only = new URLSearchParams(location.search).get('only');
+  if (only) {
+    document.body.classList.add('solo');
+    const keep = only.toUpperCase() === 'A' ? 'iconA' : 'iconB';
+    document.querySelectorAll('.wrap > *').forEach(el => {
+      if (el.id !== keep) el.classList.add('hide');
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode / Swift
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+build/
+*.app
+*.dSYM
+
+# Sweep 构建产物
+app/build/
+app/build/t/
+*.dmg
+
+# 临时文件
+/tmp/
+*.tmp
+
+# WorkBuddy 工作记忆（会话日志，非源码）
+.workbuddy/
