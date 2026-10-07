@@ -28,7 +28,7 @@ func check(_ name: String, _ passed: Bool) {
 /// 渲染成 PNG（屏幕外窗口 + NSHostingView，同 RenderMain 的做法）
 @MainActor
 func render(_ view: some View, to path: String) {
-    let w: CGFloat = 420, h: CGFloat = 600
+    let w: CGFloat = 468, h: CGFloat = 740
     let hosting = NSHostingView(rootView: view.frame(width: w, height: h))
     hosting.frame = NSRect(x: 0, y: 0, width: w, height: h)
     let window = NSWindow(contentRect: hosting.frame, styleMask: [.borderless],

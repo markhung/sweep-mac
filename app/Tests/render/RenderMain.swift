@@ -60,12 +60,17 @@ struct RenderCheck {
         snapshot(MainView(appState: done), "04-detail", outDir: outDir)
 
         // ── 5. 诊断：日志行在无滚动容器时能否渲染
-        let plain = VStack(alignment: .leading, spacing: 0) {
-            ForEach(running.entries) { LogRow(entry: $0) }
+        let plain = VStack(alignment: .leading, spacing: 4) {
+            ForEach(running.entries) { e in
+                Text(e.text)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.current.colors.text2)
+                    .lineLimit(1)
+            }
         }
         .padding(12)
         .frame(width: 380, height: 202, alignment: .topLeading)
-        .background(Palette.panel)
+        .background(Theme.current.colors.panel)
         snapshot(plain, "05-log-plain", outDir: outDir)
 
         // ── 6. 权限引导四屏（③ 用未授权态，④ 用已授权态）
@@ -94,6 +99,13 @@ struct RenderCheck {
         bannerState.showOnboarding = false
         snapshot(MainView(appState: bannerState), "14-main-banner", outDir: outDir)
 
+        // ── 8. 设置视图（含未授权态的「去授权」行）
+        let settingsState = AppState()
+        settingsState.showSettings = true
+        snapshot(SettingsView(appState: settingsState,
+                              isPresented: .constant(true)),
+                 "20-settings", outDir: outDir)
+
         // 还原引导标记（存在过 → 写回原值；原本没有 → 不留键）
         if guideKeyExisted {
             FullDiskAccess.hasSeenGuide = savedGuideSeen
@@ -109,7 +121,7 @@ struct RenderCheck {
     @MainActor
     private static func snapshot(_ view: some View, _ name: String,
                                  outDir: String, scale: CGFloat = 2) {
-        let w: CGFloat = 420, h: CGFloat = 600
+        let w: CGFloat = 468, h: CGFloat = 740
         let hosting = NSHostingView(rootView: view.frame(width: w, height: h))
         hosting.frame = NSRect(x: 0, y: 0, width: w, height: h)
 

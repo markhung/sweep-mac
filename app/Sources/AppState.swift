@@ -44,27 +44,32 @@ final class AppState: ObservableObject {
 
     // MARK: - 用户设置（持久化到 UserDefaults）
 
+    // didSet 只在值真正变化时落盘/调系统服务：init 还原持久化值也会触发
+    // didSet，若不判等，每次启动都会白写一遍 UserDefaults、重调一遍自启服务。
     @Published var deleteMode: DeleteMode = .direct {
-        didSet { UserDefaults.standard.set(deleteMode.rawValue, forKey: "Sweep.deleteMode") }
+        didSet {
+            guard oldValue != deleteMode else { return }
+            UserDefaults.standard.set(deleteMode.rawValue, forKey: "Sweep.deleteMode")
+        }
     }
     @Published var launchAtLogin: Bool = false {
         didSet {
+            guard oldValue != launchAtLogin else { return }
             UserDefaults.standard.set(launchAtLogin, forKey: "Sweep.launchAtLogin")
             LoginController.setLaunchAtLogin(launchAtLogin)
         }
     }
-    @Published var showInMenuBar: Bool = false {
-        didSet { UserDefaults.standard.set(showInMenuBar, forKey: "Sweep.showInMenuBar") }
-    }
+    // 「菜单栏常驻」不在这里持有 @Published：它由 AppDelegate 的裸
+    // NSStatusItem 直接读持久化键 "Sweep.showInMenuBar"。之前的
+    // MenuBarExtra(isInserted:) 场景会和 NSStatusItemScene 互相触发
+    // 失效，主线程死循环卡死，已整体移除。
 
     /// 设置面板是否打开（与主界面互斥的视图切换，非持久）
     @Published var showSettings = false
 
-    /// 清理范围（首屏胶囊 + 明细逐类），与设计稿 CATS 一致
+    /// 清理范围承诺（设计稿 CATS，六类；与结果摘要的「涉及分类」同源口径）
     let categories: [String] = [
-        "系统缓存", "应用缓存", "Xcode 派生数据", "用户缓存", "日志文件",
-        "缩略图缓存", "浏览器缓存", "邮件下载", "iOS 备份", "下载项残留",
-        "剪贴板历史", "字体缓存", "系统日志", "翻译缓存"
+        "应用缓存", "开发者工具", "系统垃圾", "浏览器", "应用残留", "大文件"
     ]
 
     // MARK: - 首次启动的权限引导
@@ -129,8 +134,6 @@ final class AppState: ObservableObject {
         }
         deleteMode = DeleteMode(rawValue: UserDefaults.standard.string(forKey: "Sweep.deleteMode") ?? "") ?? .direct
         launchAtLogin = UserDefaults.standard.bool(forKey: "Sweep.launchAtLogin")
-        showInMenuBar = UserDefaults.standard.bool(forKey: "Sweep.showInMenuBar")
-        LoginController.setLaunchAtLogin(launchAtLogin)
     }
 
     // MARK: - 权限引导
@@ -281,6 +284,8 @@ final class AppState: ObservableObject {
         case let .diskInfo(text, bytes):
             diskSummary = text
             if let bytes { diskBeforeBytes = bytes }
+            // mole 终端开场那行「⚙ … · 可用空间 …」，日志流里原样呈现
+            entries.append(LogEntry(kind: .info, text: text))
 
         case let .moduleStarted(nameEN):
             currentModuleEN = nameEN
@@ -292,6 +297,8 @@ final class AppState: ObservableObject {
             displayPercent = max(displayPercent, start)
             bubbleText = MoleText.quip(for: cn)
             appendReportHeader(cn)
+            // 模块标题进日志流（mole 的 ➤ 行），供「清理明细」滚动展示
+            entries.append(LogEntry(kind: .section, text: cn))
 
         case let .entry(entry):
             entries.append(entry)
@@ -424,6 +431,9 @@ final class AppState: ObservableObject {
     var releasedText: String {
         reclaimedBytes > 0 ? "已释放 \(SizeFormat.human(reclaimedBytes))" : ""
     }
+
+    /// 已清理的条目数（日志流里 ✓ 行的计数），供明细状态与停止确认使用
+    var cleanedCount: Int { entries.filter { $0.kind == .item }.count }
 
     var elapsedText: String {
         let seconds = Int(Date().timeIntervalSince(runStart))

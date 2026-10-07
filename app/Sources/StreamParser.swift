@@ -87,6 +87,9 @@ struct MoleStreamParser {
                       "No additional space freed", "No significant reclaimable"] {
             if trimmed.hasPrefix(noise) { return nil }
         }
+        // 本进程 NSLog 混进引擎输出流时（stderr 合流）会带时间戳头，
+        // 是应用自身日志，不是引擎事件
+        if trimmed.contains("] [Sweep] "), trimmed.contains(" Sweep[") { return nil }
         return .info(trimmed)
     }
 

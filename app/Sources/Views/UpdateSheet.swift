@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// 检查更新浮层：设计稿要求「正在检查更新… / 已是最新 / 有新版本」。
+/// 检查更新浮层：挂在标题栏版本号下的非模态浮层（设计稿「检查更新」）。
+/// 点版本号才问，不问就不打扰；Esc / 点空白 / 「知道了」三条退路。
+/// 箭头与卡片同底色、同边框色，视觉上是同一个容器。
 /// 当前无真实更新服务器，采用本地版本占位——打开后模拟检查，最终展示「已是最新」。
 struct UpdateSheet: View {
     @ObservedObject var appState: AppState
@@ -14,68 +16,86 @@ struct UpdateSheet: View {
     }
 
     var body: some View {
-        ZStack {
-            Color(hex: 0x000000, alpha: 0.30)
-                .frame(width: 420, height: 600)
-                .allowsHitTesting(true)
-                .onTapGesture { isPresented = false }
-
+        ZStack(alignment: .top) {
             card
+            arrow
+                .offset(y: -6)      // 底部 1px 叠进卡片边框，接缝融合
         }
-        .frame(width: 420, height: 600)
+        .padding(.top, 7)           // 给箭头留出高度
         .onAppear { runCheck() }
     }
 
-    private var card: some View {
-        VStack(spacing: 16) {
-            Text("检查更新")
-                .font(theme.fonts.body(15, .bold))
-                .foregroundStyle(theme.colors.text0)
+    /// 箭头：实心三角与卡片同底色，两条斜边描边与边框同色
+    private var arrow: some View {
+        let borderColor = Color(hex: 0x2E2E37)
+        return ZStack {
+            Path { p in
+                p.move(to: CGPoint(x: 0, y: 7))
+                p.addLine(to: CGPoint(x: 7, y: 0))
+                p.addLine(to: CGPoint(x: 14, y: 7))
+                p.closeSubpath()
+            }
+            .fill(theme.colors.elev)
+            Path { p in
+                p.move(to: CGPoint(x: 0, y: 7))
+                p.addLine(to: CGPoint(x: 7, y: 0))
+                p.addLine(to: CGPoint(x: 14, y: 7))
+            }
+            .stroke(borderColor, lineWidth: 1)
+        }
+        .frame(width: 14, height: 7)
+        .offset(x: 63)              // 指向标题栏的版本号入口
+    }
 
+    private var card: some View {
+        VStack(spacing: 14) {
             if checking {
                 ProgressView()
                     .progressViewStyle(.circular)
-                    .scaleEffect(1.1)
+                    .scaleEffect(0.9)
                 Text("正在检查更新…")
-                    .font(theme.fonts.body(12, .medium))
+                    .font(.system(size: 12.5, weight: .medium))
                     .foregroundStyle(theme.colors.text1)
             } else {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 34))
-                    .foregroundStyle(theme.colors.ok)
-                Text("已是最新")
-                    .font(theme.fonts.body(14, .semibold))
-                    .foregroundStyle(theme.colors.text0)
+                // 结果用形状 + 颜色双通道：对勾 = 没问题
+                HStack(spacing: 7) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 17))
+                        .foregroundStyle(theme.colors.ok)
+                    Text("已是最新")
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundStyle(theme.colors.text0)
+                }
                 Text("当前版本 v\(appState.appVersion)")
-                    .font(theme.fonts.body(12, .medium))
+                    .font(.system(size: 11))
                     .foregroundStyle(theme.colors.text2)
+                Button {
+                    isPresented = false
+                } label: {
+                    Text("知道了")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(theme.colors.text0)
+                        .padding(.horizontal, 18)
+                        .frame(height: 30)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.clear)
+                                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .stroke(theme.colors.border, lineWidth: 1))
+                        )
+                }
+                .buttonStyle(.plain)
             }
-
-            Button {
-                isPresented = false
-            } label: {
-                Text("稍后")
-                    .font(theme.fonts.body(13, .semibold))
-                    .foregroundStyle(theme.colors.text0)
-                    .frame(width: 120, height: 34)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(theme.colors.elev)
-                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(theme.colors.border, lineWidth: 1.5))
-                    )
-            }
-            .buttonStyle(.plain)
-            .disabled(checking)
         }
-        .padding(26)
+        .padding(20)
+        .frame(width: 240)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(theme.colors.panel)
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(theme.colors.border, lineWidth: 2))
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .fill(theme.colors.elev)
+                .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .stroke(Color(hex: 0x2E2E37), lineWidth: 1))
         )
-        .shadow(color: theme.colors.text0.opacity(0.18), radius: 18, x: 0, y: 8)
+        .shadow(color: .black.opacity(0.45), radius: 16, x: 0, y: 10)
     }
 
     private func runCheck() {

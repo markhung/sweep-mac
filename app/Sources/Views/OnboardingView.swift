@@ -53,7 +53,7 @@ struct OnboardingView: View {
     private var setupH: some View {
         Text("需要「完全磁盘访问权限」")
             .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(theme.colors.text1)
+            .foregroundStyle(theme.colors.text0)
             .multilineTextAlignment(.center)
             .padding(.top, 22)
     }
@@ -87,7 +87,7 @@ struct OnboardingView: View {
     private func step(_ n: Int, _ text: String) -> some View {
         HStack(spacing: 10) {
             Text("\(n)")
-                .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
+                .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(theme.colors.accent)
                 .frame(width: 19, height: 19)
                 .background(
@@ -96,7 +96,7 @@ struct OnboardingView: View {
                 )
             Text(text)
                 .font(.system(size: 12.5))
-                .foregroundStyle(theme.colors.text2)
+                .foregroundStyle(theme.colors.text1)
             Spacer(minLength: 0)
         }
         .padding(.vertical, 6)
@@ -109,7 +109,7 @@ struct OnboardingView: View {
                     Circle().fill(theme.colors.accent).frame(width: 6, height: 6)
                     Text("已打开系统设置，勾选 Sweep 后回来点「重新检测」")
                         .font(.system(size: 11.5))
-                        .foregroundStyle(theme.colors.text3)
+                        .foregroundStyle(theme.colors.text1)
                 }
             }
             Button(action: primaryAction) {

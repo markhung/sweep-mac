@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 明细区 —— 严格对齐设计稿 `.detail`：
-/// dhead（标题+状态）→ 内容（idle:intro / running:list / done:summary 或 明细）→ dfoot（进度条）
+/// dhead（标题+状态）→ 内容（idle:intro / running+查看明细:mole 日志流 / done:summary）→ dfoot（进度条）
 struct DetailView: View {
     @ObservedObject var appState: AppState
     private var theme: Theme { Theme.current }
@@ -9,42 +9,46 @@ struct DetailView: View {
     private var phase: Phase { appState.phase }
     private var isStopped: Bool { appState.report?.cancelled == true }
 
+    /// 完成后明细先留 480ms 让最后一行的对勾落地，再让位给结果摘要（设计稿状态机）
+    /// 注意：裸 swiftc 编译载入不了 SwiftUI 宏，@State 一律用显式 State(initialValue:) 写法
+    private var _pendingSummary = State(initialValue: false)
+    private var pendingSummary: Bool {
+        get { _pendingSummary.wrappedValue }
+        nonmutating set { _pendingSummary.wrappedValue = newValue }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            dhead
             content
             dfoot
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.colors.panel)
+        .onChange(of: phase) { newPhase in
+            guard newPhase == .done else {
+                if !newPhase.isRunning { pendingSummary = false }
+                return
+            }
+            pendingSummary = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.48) {
+                // 期间点了「完成」会直接重置，此时不该再换页
+                if appState.phase == .done { pendingSummary = false }
+            }
+        }
     }
 
-    // MARK: - 头部
-    private var dhead: some View {
-        HStack {
-            Text("清理明细")
-                .font(.system(size: 12.5, weight: .semibold))
-                .foregroundStyle(theme.colors.text1)
-            Spacer()
-            Text(dstat)
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(theme.colors.text3)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(theme.colors.borderSoft).frame(height: 1)
-        }
-    }
-    private var dstat: String {
+    // MARK: - 状态
+    private var percent: Double { appState.percent }
+
+    /// 页脚左侧的状态文案（设计稿 .plegend：四态各一）
+    private var legendText: String {
         switch phase {
         case .idle: return "等待开始"
-        case .running: return "清理中 \(Int(percent * 100))%"
-        case .done: return isStopped ? "已强制停止" : "已清理干净"
+        case .running: return "正在释放空间"
+        case .done: return isStopped ? "已强制停止" : "清理完成"
         case .failed: return "清理失败"
         }
     }
-    private var percent: Double { appState.percent }
 
     // MARK: - 内容
     @ViewBuilder
@@ -53,13 +57,16 @@ struct DetailView: View {
         case .idle:
             intro
         case .running:
-            list
+            logStream
         case .done:
             if appState.showDetail {
                 VStack(spacing: 0) {
                     sumMini
-                    list
+                    logStream
                 }
+            } else if pendingSummary {
+                // 摘要未接管前，明细原地多停半秒
+                logStream
             } else {
                 summary
             }
@@ -75,7 +82,7 @@ struct DetailView: View {
                 Spacer(minLength: 0)
                 Text("我会帮你扫干净这些地方")
                     .font(.system(size: 15.5, weight: .semibold))
-                    .foregroundStyle(theme.colors.text1)
+                    .foregroundStyle(theme.colors.text0)
                 chips
                 introNotes
                 if !appState.permissionGranted { permBar }
@@ -89,10 +96,10 @@ struct DetailView: View {
         FlowLayout(spacing: 9) {
             ForEach(appState.categories, id: \.self) { c in
                 Text(c)
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(theme.colors.text2)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(theme.colors.text1)
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 6)
                     .background(
                         Capsule().fill(theme.colors.elev)
                             .overlay(Capsule().stroke(theme.colors.border, lineWidth: 1))
@@ -108,13 +115,16 @@ struct DetailView: View {
     }
     private var introNotes: some View {
         VStack(spacing: 5) {
-            Text("全部在**本机完成**，**不联网**。")
-                .font(.system(size: 12))
-                .foregroundStyle(theme.colors.text3)
-            Text("只管用户级内容，**不会向你索要管理员密码**。")
-                .font(.system(size: 12))
-                .foregroundStyle(theme.colors.text3)
+            (Text("全部在").foregroundColor(theme.colors.text2)
+                + Text("本机完成").fontWeight(.medium).foregroundColor(theme.colors.text1)
+                + Text("，").foregroundColor(theme.colors.text2)
+                + Text("不联网").fontWeight(.medium).foregroundColor(theme.colors.text1)
+                + Text("。").foregroundColor(theme.colors.text2))
+            (Text("只管用户级内容，").foregroundColor(theme.colors.text2)
+                + Text("不会向你索要管理员密码").fontWeight(.medium).foregroundColor(theme.colors.text1)
+                + Text("。").foregroundColor(theme.colors.text2))
         }
+        .font(.system(size: 12))
         .lineSpacing(8)
         .padding(.top, 14)
         .overlay(alignment: .top) {
@@ -128,7 +138,7 @@ struct DetailView: View {
                 .foregroundStyle(theme.colors.accent).opacity(0.85)
             Text("未授予完全磁盘访问权限")
                 .font(.system(size: 11.5))
-                .foregroundStyle(theme.colors.text3)
+                .foregroundStyle(theme.colors.text2)
             Button("去授权") { openFDA() }
                 .buttonStyle(.plain)
                 .font(.system(size: 11.5, weight: .semibold))
@@ -144,57 +154,128 @@ struct DetailView: View {
         )
     }
 
-    // MARK: - 明细列表
-    private var list: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                ForEach(Array(appState.categories.enumerated()), id: \.element) { i, name in
-                    row(name, index: i)
-                    if i < appState.categories.count - 1 {
-                        Divider().background(theme.colors.borderSoft)
+    // MARK: - mole 日志流（终端默认滚动样式：持续追加、自动跟随到底）
+    private var logStream: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(appState.entries) { entry in
+                        logLine(entry).id(entry.id)
                     }
+                    Color.clear.frame(height: 2).id("log-bottom")
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .onAppear { proxy.scrollTo("log-bottom", anchor: .bottom) }
+            .onChange(of: appState.entries.count) { _ in
+                // 等新行完成布局再贴底，模拟终端 tail -f 的跟随感
+                DispatchQueue.main.async {
+                    proxy.scrollTo("log-bottom", anchor: .bottom)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
         }
     }
-    private func row(_ name: String, index: Int) -> some View {
-        let done = (phase == .done)
-        let active = (phase == .running)
-        return HStack(spacing: 11) {
-            Circle()
-                .fill(done ? theme.colors.ok.opacity(0.09) : theme.colors.accent.opacity(0.11))
-                .frame(width: 30, height: 30)
-                .overlay(
-                    Image(systemName: done ? "checkmark" : "cpu")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(done ? theme.colors.ok : theme.colors.accent)
-                )
-            Text(name)
-                .font(.system(size: 12.5))
-                .foregroundStyle(theme.colors.text1)
-            Spacer()
-            if active || done {
-                GeometryReader { geo in
-                    Capsule().fill(theme.colors.border)
-                        .frame(height: 4)
-                        .overlay(alignment: .leading) {
-                            Capsule()
-                                .fill(done
-                                      ? LinearGradient(colors: [Color(hex: 0x8CEAB6), theme.colors.ok], startPoint: .leading, endPoint: .trailing)
-                                      : LinearGradient(colors: [theme.colors.accent, theme.colors.accent2], startPoint: .leading, endPoint: .trailing))
-                                .frame(width: geo.size.width * (done ? 1 : max(0.04, percent)), height: 4)
-                        }
-                }
-                .frame(width: 64, height: 4)
+
+    /// 单行日志：沿用 mole 终端的标记符号与配色语义
+    /// （➤ 模块头 / ✓ 清理 / ◎ 跳过 / ⊙ 手动 / 说明行弱化）
+    @ViewBuilder
+    private func logLine(_ e: LogEntry) -> some View {
+        switch e.kind {
+        case .section:
+            HStack(spacing: 6) {
+                Text("➤")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(theme.colors.accent)
+                Text(e.text)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(theme.colors.text0)
+                    .lineLimit(1)
             }
-            Text(done ? "完成" : (active ? "清理中" : ""))
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(done ? theme.colors.ok : theme.colors.accent)
-                .frame(width: 56, alignment: .trailing)
+            .padding(.top, 9)
+            .padding(.bottom, 3)
+
+        case .item:
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("✓")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(theme.colors.ok)
+                Text(e.text)
+                    .font(.system(size: 12))
+                    .foregroundStyle(theme.colors.text1)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if let note = e.note {
+                    Text(note)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(theme.colors.text2)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 10)
+                if let size = e.size {
+                    Text(size)
+                        .font(.system(size: 11.5))
+                        .monospacedDigit()
+                        .frame(width: 68, alignment: .trailing)   // 设计稿：大小列锁 68px
+                        .foregroundStyle(theme.colors.text2)
+                }
+            }
+            .padding(.vertical, 2.5)
+
+        case .skip:
+            glyphLine("◎", glyphColor: theme.colors.text2,
+                      textColor: theme.colors.text2, e)
+
+        case .manual:
+            glyphLine("⊙", glyphColor: theme.colors.accent,
+                      textColor: theme.colors.text1, e, noteColor: theme.colors.accent)
+
+        case .empty:
+            glyphLine("✓", glyphColor: theme.colors.text2,
+                      textColor: theme.colors.text2, e)
+
+        case .info:
+            Text(e.text)
+                .font(.system(size: 11.5))
+                .foregroundStyle(theme.colors.text2)
+                .padding(.vertical, 2.5)
+
+        case .error:
+            Text(e.text)
+                .font(.system(size: 12))
+                .foregroundStyle(theme.colors.warn)
+                .padding(.vertical, 2.5)
         }
-        .padding(.vertical, 9)
+    }
+
+    private func glyphLine(_ glyph: String, glyphColor: Color, textColor: Color,
+                           _ e: LogEntry, noteColor: Color? = nil) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(glyph)
+                .font(.system(size: 11))
+                .foregroundStyle(glyphColor)
+            Text(e.text)
+                .font(.system(size: 12))
+                .foregroundStyle(textColor)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            if let note = e.note {
+                Text(note)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(noteColor ?? theme.colors.text2)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 10)
+            if let size = e.size {
+                Text(size)
+                    .font(.system(size: 11.5))
+                    .monospacedDigit()
+                    .frame(width: 68, alignment: .trailing)       // 设计稿：大小列锁 68px
+                    .foregroundStyle(theme.colors.text2)
+            }
+        }
+        .padding(.vertical, 2.5)
     }
 
     // MARK: - 结果摘要
@@ -202,21 +283,25 @@ struct DetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .lastTextBaseline) {
-                    Text("已释放")
+                    Text(isStopped ? "已停止 · 本次释放" : "已释放")
                         .font(.system(size: 10.5, weight: .semibold))
                         .tracking(1.3)
                         .textCase(.uppercase)
                         .foregroundStyle(isStopped ? theme.colors.accent : theme.colors.ok)
                     Spacer()
                     let gb = (appState.report?.reclaimedBytes ?? 0) / 1_000_000_000
-                    (Text(String(format: "%.2f", gb)) + Text(" GB").font(.system(size: 14)))
-                        .font(.system(size: 27, weight: .medium, design: .monospaced))
+                    (Text(String(format: "%.2f", gb))
+                        + Text(" GB").font(.system(size: 14)).foregroundColor(theme.colors.text2))
+                        .font(.system(size: 27, weight: .medium))
+                        .monospacedDigit()
+                        .tracking(-0.8)
                         .foregroundStyle(theme.colors.text0)
                 }
                 if let r = appState.report {
                     Text("扫描 \(r.categories) 类 · 移除 \(r.itemsCleaned) 项")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(theme.colors.text3)
+                        .font(.system(size: 11))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.colors.text2)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .padding(.top, 6)
                 }
@@ -234,7 +319,7 @@ struct DetailView: View {
                 } label: {
                     Text("查看明细")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(theme.colors.text1)
+                        .foregroundStyle(theme.colors.text0)
                         .frame(maxWidth: .infinity)
                         .frame(height: 36)
                         .background(
@@ -257,12 +342,12 @@ struct DetailView: View {
         )
     }
     private func sumRow(_ title: String, value: String) -> some View {
-        HStack {
-            Text(title).font(.system(size: 11.5)).foregroundStyle(theme.colors.text3)
+        HStack(alignment: .firstTextBaseline) {
+            Text(title).font(.system(size: 11.5)).foregroundStyle(theme.colors.text2)
             Spacer()
             Text(value)
-                .font(.system(size: 13, design: .monospaced))
-                .foregroundStyle(theme.colors.text1)
+                .font(.system(size: 13))
+                .foregroundStyle(theme.colors.text0)
         }
         .padding(.vertical, 7)
         .overlay(alignment: .top) {
@@ -285,7 +370,7 @@ struct DetailView: View {
             }
         }
         .font(.system(size: 11.5))
-        .foregroundStyle(theme.colors.text3)
+        .foregroundStyle(theme.colors.text2)
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
@@ -299,13 +384,16 @@ struct DetailView: View {
     private var sumMini: some View {
         HStack {
             let gb = (appState.report?.reclaimedBytes ?? 0) / 1_000_000_000
-            Text(String(format: "已释放 %.2f GB", gb))
-                .font(.system(size: 12.5, design: .monospaced))
+            Text("已释放")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(theme.colors.accent)
+            Text(String(format: "%.2f GB", gb))
+                .font(.system(size: 11))
                 .foregroundStyle(theme.colors.text1)
             Spacer()
             Button("收起明细") { appState.showDetail = false }
                 .buttonStyle(.plain)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 11.5, weight: .semibold))
                 .foregroundStyle(theme.colors.accent)
         }
         .padding(.horizontal, 20)
@@ -332,13 +420,14 @@ struct DetailView: View {
             }
             .frame(height: 4)
             HStack {
-                Text(phase == .idle ? "等待开始" : dstat)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(theme.colors.text3)
+                Text(legendText)
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.colors.text2)
                 Spacer()
                 Text(phase == .idle ? "—" : "\(Int(percent * 100))%")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(theme.colors.text3)
+                    .font(.system(size: 11))
+                    .monospacedDigit()
+                    .foregroundStyle(theme.colors.text1)
             }
         }
         .padding(.horizontal, 20)

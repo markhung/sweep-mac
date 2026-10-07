@@ -4,6 +4,7 @@ import SwiftUI
 /// 读数（标签+数值同行）→ 环（r78 渐变，环心四态切换）→ 主按钮 cta → hint
 struct GaugeView: View {
     @ObservedObject var appState: AppState
+    var onStopRequest: () -> Void = {}
     private var theme: Theme { Theme.current }
 
     private var phase: Phase { appState.phase }
@@ -31,8 +32,13 @@ struct GaugeView: View {
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity)
         .background(
-            LinearGradient(colors: [Color(hex: 0xFFFFFF, alpha: 0.012), .clear],
-                           startPoint: .top, endPoint: .bottom)
+            RadialGradient(colors: [Color(hex: 0xFFB224, alpha: 0.05), .clear],
+                           center: UnitPoint(x: 0.5, y: 0.4),
+                           startRadius: 0, endRadius: 380)
+                .overlay(
+                    LinearGradient(colors: [Color(hex: 0xFFFFFF, alpha: 0.012), .clear],
+                                   startPoint: .top, endPoint: .bottom)
+                )
         )
         .overlay(alignment: .bottom) {
             Rectangle().fill(theme.colors.borderSoft).frame(height: 1)
@@ -40,6 +46,8 @@ struct GaugeView: View {
     }
 
     // MARK: - 读数
+    /// 设计稿口径：待机不报数（待清理 —）；清理中读「已释放」实时增长；
+    /// 完成/停止读最终释放量。百分比只住在环心里。
     private var metricRow: some View {
         HStack(alignment: .lastTextBaseline, spacing: 10) {
             Text(metricLabel)
@@ -47,19 +55,33 @@ struct GaugeView: View {
                 .tracking(1.54)
                 .textCase(.uppercase)
                 .foregroundStyle(metricColor)
-            Text(phase == .idle ? "—" : metricValue)
-                .font(.system(size: 28, weight: .medium, design: .monospaced))
-                .tracking(-0.56)
-                .foregroundStyle(phase == .idle ? theme.colors.text3 : theme.colors.text0)
+            if phase == .idle {
+                Text("—")
+                    .font(.system(size: 28, weight: .medium))
+                    .tracking(-0.56)
+                    .foregroundStyle(theme.colors.text2)
+            } else {
+                (Text(readout.value)
+                    + Text(" \(readout.unit)").font(.system(size: 14))
+                        .foregroundColor(theme.colors.text2))
+                    .font(.system(size: 28, weight: .medium))
+                    .monospacedDigit()
+                    .tracking(-0.56)
+                    .foregroundStyle(theme.colors.text0)
+            }
         }
         .frame(height: 30)
     }
+    private var readout: (value: String, unit: String) {
+        switch phase {
+        case .running: return SizeFormat.split(appState.reclaimedBytes)
+        default:       return appState.resultSize
+        }
+    }
     private var metricLabel: String {
         switch phase {
-        case .idle: return "待扫描"
-        case .running: return "正在清理"
-        case .done: return isStopped ? "已强制停止" : "已清理干净"
-        case .failed: return "清理失败"
+        case .idle: return "待清理"
+        case .running, .done, .failed: return "已释放"
         }
     }
     private var metricColor: Color {
@@ -71,35 +93,59 @@ struct GaugeView: View {
         }
     }
     private var metricValue: String {
-        switch phase {
-        case .idle: return "—"
-        case .running: return "\(Int(percent * 100))%"
-        case .done:
-            let gb = (appState.report?.reclaimedBytes ?? 0) / 1_000_000_000
-            return String(format: "%.2f GB", gb)
-        case .failed: return "—"
-        }
+        // 兼容旧引用；读数已由 readout 提供
+        readout.value
     }
 
     // MARK: - 环
     private var ringArea: some View {
         ZStack {
+            tickRing
             Circle()
-                .stroke(trackColor, lineWidth: 8)
+                .stroke(trackColor, lineWidth: 5)
                 .frame(width: ringDiameter, height: ringDiameter)
             if phase != .idle {
                 Circle()
                     .trim(from: 0, to: CGFloat(min(max(percent, 0), 1)))
-                    .stroke(progGradient, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .stroke(progGradient, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                     .frame(width: ringDiameter, height: ringDiameter)
                     .rotationEffect(.degrees(-90))
+                    .opacity(isStopped ? 0.78 : 1)   // 停止态压暗，传达「未完成」
+                    .shadow(color: doneGlow ? theme.colors.ok.opacity(0.4) : .clear,
+                            radius: 7)               // 完成是唯一的奖励时刻
+            }
+            if phase == .running {
+                OrbitComet(diameter: ringDiameter, color: theme.colors.accent)
             }
             core
         }
-        .frame(height: 160)
+        .frame(height: 176)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 13)
+        .padding(.vertical, 8)
     }
+    /// 外部刻度环：72 根，每 6 根加长（设计稿进度环规格）
+    private var tickRing: some View {
+        Canvas { context, size in
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let base = ringDiameter / 2 + 5
+            for i in 0..<72 {
+                let angle = CGFloat(i) / 72 * 2 * .pi
+                let len: CGFloat = i % 6 == 0 ? 5 : 2.5
+                let p1 = CGPoint(x: center.x + base * cos(angle),
+                                 y: center.y + base * sin(angle))
+                let p2 = CGPoint(x: center.x + (base + len) * cos(angle),
+                                 y: center.y + (base + len) * sin(angle))
+                var path = Path()
+                path.move(to: p1)
+                path.addLine(to: p2)
+                context.stroke(path, with: .color(theme.colors.text2.opacity(0.32)),
+                               lineWidth: 1)
+            }
+        }
+        .frame(width: ringDiameter + 30, height: ringDiameter + 30)
+        .allowsHitTesting(false)
+    }
+    private var doneGlow: Bool { phase == .done && !isStopped }
     private var trackColor: Color {
         phase == .idle ? theme.colors.borderSoft : theme.colors.border
     }
@@ -131,10 +177,11 @@ struct GaugeView: View {
             case .cleaning:
                 HStack(alignment: .lastTextBaseline, spacing: 2) {
                     Text("\(Int(percent * 100))")
-                        .font(.system(size: 28, weight: .medium, design: .monospaced))
-                        .tracking(-0.5)
+                        .font(.system(size: 31, weight: .medium))
+                        .tracking(-0.93)
                     Text("%")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(theme.colors.text2)
                 }
                 .foregroundStyle(theme.colors.text0)
                 Text("正在清理").modifier(CoreCap()).foregroundStyle(theme.colors.text3)
@@ -165,6 +212,9 @@ struct GaugeView: View {
     private var cta: some View {
         Button(action: ctaAction) {
             Text(ctaLabel)
+                .font(.system(size: 15, weight: .semibold))
+                .tracking(0.15)
+                .foregroundStyle(ctaLabelColor)
                 .frame(maxWidth: 320)
                 .frame(height: 46)
                 .background(ctaBackground)
@@ -179,12 +229,20 @@ struct GaugeView: View {
         .frame(maxWidth: .infinity)
         .frame(height: 46)
     }
+    /// 设计稿 .cta：琥珀底上用深棕字，中性态用次级文字色；
+    /// 悬停揭示停止动作时转 danger-txt（#FF8079）
+    private var ctaLabelColor: Color {
+        switch phase {
+        case .idle: return Color(hex: 0x1C1305)
+        case .running: return hovered ? Color(hex: 0xFF8079) : theme.colors.text1
+        case .done, .failed: return theme.colors.text0
+        }
+    }
     private var ctaLabel: String {
         switch phase {
         case .idle: return "开始清理"
-        case .running: return hovered ? "停止" : "清理中"
-        case .done: return "再清理"
-        case .failed: return "再清理"
+        case .running: return hovered ? "停止清理" : "清理中…"
+        case .done, .failed: return "完成"
         }
     }
     private var ctaBackground: some View {
@@ -213,19 +271,65 @@ struct GaugeView: View {
     private func ctaAction() {
         switch phase {
         case .idle: appState.start()
-        case .running: appState.cancel()
-        case .done: appState.reset(); appState.start()
-        case .failed: appState.reset()
+        case .running: onStopRequest()          // 点击 → 确认层，不直接停
+        case .done, .failed: appState.reset()   // 「完成」→ 回待机
         }
     }
 
     // MARK: - 提示
     private var hintRow: some View {
-        Text(phase == .idle ? "点击开始，全程在本机完成 · 可随时停止" : " ")
-            .font(.system(size: 11, design: .monospaced))
+        Text(hintText)
+            .font(.system(size: 11))
+            .monospacedDigit()
             .tracking(0.22)
-            .foregroundStyle(theme.colors.text3)
+            .foregroundStyle(theme.colors.text2)
             .frame(minHeight: 14)
             .padding(.top, 12)
+    }
+    private var hintText: String {
+        switch phase {
+        case .idle: return "点击开始，全程在本机完成 · 可随时停止"
+        case .running: return "正在清理 · 用时 \(appState.elapsedText) · 可随时停止"
+        case .done: return isStopped ? "已停止 · 可随时再开始" : "清理完成"
+        case .failed: return "清理失败"
+        }
+    }
+
+    /// 清理中的环轨动效：一束彗尾沿环匀速旋转（linear，无回弹，仪器感）
+    private struct OrbitComet: View {
+        var diameter: CGFloat
+        var color: Color
+
+        // 裸 swiftc 载入不了宏，用显式 State(initialValue:) 写法
+        private var _angle = State(initialValue: Double(0))
+        private var angle: Double {
+            get { _angle.wrappedValue }
+            nonmutating set { _angle.wrappedValue = newValue }
+        }
+
+        /// 彗尾弧长（占整圈比例），渐变从透明尾到实色头
+        private static let arcFraction: Double = 0.14
+
+        var body: some View {
+            let sweep = 360 * Self.arcFraction
+            return Circle()
+                .trim(from: 0, to: Self.arcFraction)
+                .stroke(
+                    AngularGradient(colors: [color.opacity(0), color],
+                                    center: .center,
+                                    startAngle: .degrees(0),
+                                    endAngle: .degrees(sweep)),
+                    style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .frame(width: diameter, height: diameter)
+                .rotationEffect(.degrees(angle))
+                .onAppear {
+                    withAnimation(.linear(duration: 1.8)
+                        .repeatForever(autoreverses: false)) {
+                        angle = 360
+                    }
+                }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
     }
 }

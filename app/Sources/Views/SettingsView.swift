@@ -13,7 +13,6 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             setHd
             setBody
-            setFoot
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.colors.bg)
@@ -24,17 +23,17 @@ struct SettingsView: View {
         HStack {
             Text("设置")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(theme.colors.text1)
+                .foregroundStyle(theme.colors.text0)
             Spacer()
             Button {
                 appState.showSettings = false
                 isPresented = false
             } label: {
                 Text("完成")
-                    .font(.system(size: 12.5, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Color(hex: 0x1C1305))
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
                     .background(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .fill(theme.colors.accent)
@@ -56,14 +55,7 @@ struct SettingsView: View {
                 sgrp("清理方式") {
                     srow(icon: "trash", name: "删除方式",
                          desc: "立即释放磁盘空间") {
-                        Picker("", selection: Binding(get: { appState.deleteMode },
-                                                      set: { appState.deleteMode = $0 })) {
-                            ForEach(DeleteMode.allCases, id: \.self) { m in
-                                Text(m.label).tag(m)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
+                        deleteSegment
                     }
                 }
                 sgrp("通用") {
@@ -72,6 +64,10 @@ struct SettingsView: View {
                         amberSwitch(Binding(get: { appState.launchAtLogin },
                                             set: { appState.launchAtLogin = $0 }))
                     }
+                    srow(icon: "person.crop.circle", name: "登录",
+                         desc: "正在开发中，敬请期待") {
+                        devBadge
+                    }
                 }
                 sgrp("权限与关于") {
                     srow(icon: "shield", name: "完全磁盘访问权限",
@@ -79,7 +75,7 @@ struct SettingsView: View {
                         if !appState.permissionGranted {
                             Button("去授权") { openFDA() }
                                 .buttonStyle(.plain)
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: 11.5, weight: .semibold))
                                 .foregroundStyle(theme.colors.accent)
                         }
                     }
@@ -87,7 +83,7 @@ struct SettingsView: View {
                          desc: "当前版本") {
                         Button("检查更新") { isPresented = false; onCheckUpdate() }
                             .buttonStyle(.plain)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 11.5, weight: .semibold))
                             .foregroundStyle(theme.colors.accent)
                     }
                 }
@@ -97,20 +93,16 @@ struct SettingsView: View {
         }
     }
 
+    /// 分组只留一条小标题 + 细分隔线，不套卡片（设计稿：设置的每一项属于同一件事）
     private func sgrp(_ title: String, @ViewBuilder _ content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 0) {
             Text(title)
                 .font(.system(size: 10, weight: .semibold))
                 .tracking(1.4)
-                .foregroundStyle(theme.colors.text3)
+                .foregroundStyle(theme.colors.text2)
                 .padding(.horizontal, 2)
+                .padding(.bottom, 4)
             VStack(spacing: 0) { content() }
-                .background(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(theme.colors.panel)
-                        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            .stroke(theme.colors.borderSoft, lineWidth: 1))
-                )
         }
     }
     private func srow(icon: String, name: String, desc: String,
@@ -129,10 +121,10 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(theme.colors.text1)
+                    .foregroundStyle(theme.colors.text0)
                 Text(desc)
                     .font(.system(size: 10.5))
-                    .foregroundStyle(theme.colors.text3)
+                    .foregroundStyle(theme.colors.text2)
             }
             Spacer(minLength: 0)
             control()
@@ -145,17 +137,46 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - 底部说明
-    private var setFoot: some View {
-        Text("原型说明：删除方式会真实改变清理结果；后台运行仅记录状态。")
-            .font(.system(size: 10, design: .monospaced))
-            .foregroundStyle(theme.colors.text3)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(alignment: .top) {
-                Rectangle().fill(theme.colors.borderSoft).frame(height: 1)
+    // MARK: - 「开发中」徽标：登录模块占位，不可点击
+    private var devBadge: some View {
+        Text("开发中")
+            .font(.system(size: 10.5))
+            .foregroundStyle(theme.colors.text2)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(
+                Capsule().fill(Color.clear)
+                    .overlay(Capsule().stroke(theme.colors.border, lineWidth: 1))
+            )
+    }
+
+    // MARK: - 分段控件（对齐设计稿 .segd：面板底 + 选中项灰阶抬升，不用琥珀）
+    /// 系统原生 segmented 在深色主题下文字发黑看不清，按设计稿自绘
+    private var deleteSegment: some View {
+        HStack(spacing: 2) {
+            ForEach(DeleteMode.allCases, id: \.self) { m in
+                let selected = (m == appState.deleteMode)
+                Text(m.label)
+                    .font(.system(size: 11.5, weight: selected ? .medium : .regular))
+                    .foregroundStyle(selected ? theme.colors.text0 : theme.colors.text2)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(selected ? theme.colors.elev : Color.clear)
+                            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .stroke(selected ? Color.white.opacity(0.06) : .clear, lineWidth: 1))
+                    )
+                    .onTapGesture { appState.deleteMode = m }
             }
+        }
+        .padding(2)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(theme.colors.panel)
+                .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .stroke(theme.colors.border, lineWidth: 1))
+        )
     }
 
     // MARK: - 琥珀开关（对齐设计稿 .sw）

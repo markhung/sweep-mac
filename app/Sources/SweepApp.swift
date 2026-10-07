@@ -17,7 +17,11 @@ struct SweepApp: App {
         WindowGroup(id: "main") {
             MainView(appState: appState)
                 .fixedSize()
-                .onAppear { appState.bootstrapPermission() }
+                .onAppear {
+                    appState.bootstrapPermission()
+                    // 把 openWindow 动作交给 AppDelegate，供状态项菜单唤起主窗口
+                    delegate.openWindowAction = openWindow
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -25,16 +29,17 @@ struct SweepApp: App {
             // 这是单窗口工具，不需要「新建」
             CommandGroup(replacing: .newItem) {}
         }
-
-        MenuBarExtra("Sweep", systemImage: "sparkle", isInserted: $appState.showInMenuBar) {
-            Button("打开 Sweep") { openWindow(id: "main") }
-            Divider()
-            Button("退出") { NSApp.terminate(nil) }
-        }
+        // 注意：这里不放 MenuBarExtra 场景。它与 NSStatusItemScene 在刷新时
+        // 互相触发失效（updateConfiguration ↔ makeMainMenu），在这个系统版本
+        // 上会死循环把主线程整个卡死（hang 报告里 69s 无响应）。菜单栏图标
+        // 改由 AppDelegate 用裸 NSStatusItem 管理，见 refreshStatusItem()。
     }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// 主窗口唤起动作（由 WindowGroup 的 onAppear 注入）
+    var openWindowAction: OpenWindowAction?
+
     /// 命令行自检：`Sweep --selftest` 以预览模式跑一遍引擎，
     /// 把解析结果打到 stdout 后退出。用来在真实 bundle 环境里
     /// 验证「资源定位 → 进程启动 → 流式解析」整条链路，不删任何东西。
@@ -49,12 +54,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 启动时为 Dock 设置猫系图标
         applyDockIcon(name: "Sweep")
 
+        refreshStatusItem()
+
         if isSelfTest { runSelfTest() }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         // 常驻菜单栏开启时，关闭主窗口不退出应用（仍驻留菜单栏）
         !UserDefaults.standard.bool(forKey: "Sweep.showInMenuBar")
+    }
+
+    // MARK: - 菜单栏常驻
+
+    /// 菜单栏图标用裸 NSStatusItem，不进 SwiftUI 场景图。
+    /// 显示与否只由持久化键 "Sweep.showInMenuBar" 决定（默认隐藏）。
+    private var statusItem: NSStatusItem?
+
+    func refreshStatusItem() {
+        let wantItem = UserDefaults.standard.bool(forKey: "Sweep.showInMenuBar")
+
+        if !wantItem {
+            statusItem?.isVisible = false
+            statusItem = nil
+            return
+        }
+        guard statusItem == nil else { return }
+
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        item.button?.image = NSImage(systemSymbolName: "sparkle",
+                                     accessibilityDescription: "Sweep")
+        let menu = NSMenu()
+        menu.addItem(withTitle: "打开 Sweep",
+                     action: #selector(openMainWindow), keyEquivalent: "")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "退出",
+                     action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        item.menu = menu
+        statusItem = item
+    }
+
+    @objc private func openMainWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        if let open = openWindowAction {
+            open(id: "main")
+        } else {
+            NSApp.windows.first(where: { $0.canBecomeKey && !$0.isSheet })?
+                .makeKeyAndOrderFront(nil)
+        }
     }
 
     private func applyDockIcon(name: String) {
