@@ -16,6 +16,23 @@ struct MainView: View {
         nonmutating set { _showStopConfirm.wrappedValue = newValue }
     }
 
+    private var _showSettings = State(initialValue: false)
+    private var showSettings: Bool {
+        get { _showSettings.wrappedValue }
+        nonmutating set { _showSettings.wrappedValue = newValue }
+    }
+    private var showSettingsBinding: Binding<Bool> {
+        Binding(get: { showSettings }, set: { showSettings = $0 })
+    }
+    private var _showUpdate = State(initialValue: false)
+    private var showUpdate: Bool {
+        get { _showUpdate.wrappedValue }
+        nonmutating set { _showUpdate.wrappedValue = newValue }
+    }
+    private var showUpdateBinding: Binding<Bool> {
+        Binding(get: { showUpdate }, set: { showUpdate = $0 })
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             windowBackground
@@ -69,6 +86,14 @@ struct MainView: View {
             if showStopConfirm {
                 stopConfirmCard
             }
+        }
+        .sheet(isPresented: showSettingsBinding) {
+            SettingsView(appState: appState,
+                         isPresented: showSettingsBinding,
+                         onCheckUpdate: { showUpdate = true })
+        }
+        .sheet(isPresented: showUpdateBinding) {
+            UpdateSheet(appState: appState, isPresented: showUpdateBinding)
         }
     }
 
@@ -124,17 +149,81 @@ struct MainView: View {
     // MARK: - 标题栏
 
     private var titleBar: some View {
-        ZStack {
+        HStack(spacing: 0) {
+            trafficLights
+                .padding(.leading, 16)
+            Spacer()
             BrandMark(width: 74, height: 16.2)
                 .allowsHitTesting(false)
+            Spacer()
+            HStack(spacing: 10) {
+                versionPill
+                settingsButton
+            }
+            .padding(.trailing, 16)
         }
-        .frame(maxWidth: .infinity)
         .frame(height: titleBarHeight)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(theme.colors.borderSoft)
                 .frame(height: 2)
         }
+    }
+
+    /// macOS 交通灯（设计稿：#FF5F57 / #FEBC2E / #28C840，r=3.2）
+    private var trafficLights: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(Color(hex: 0xFF5F57))
+                .frame(width: 11, height: 11)
+                .onTapGesture { NSApp.terminate(nil) }
+            Circle()
+                .fill(Color(hex: 0xFEBC2E))
+                .frame(width: 11, height: 11)
+            Circle()
+                .fill(Color(hex: 0x28C840))
+                .frame(width: 11, height: 11)
+        }
+        .help("关闭")
+    }
+
+    /// 右侧版本号胶囊：点击唤起检查更新浮层
+    private var versionPill: some View {
+        Button {
+            showUpdate = true
+        } label: {
+            Text("v\(appState.appVersion)")
+                .font(theme.fonts.body(11, .semibold))
+                .foregroundStyle(theme.colors.text1)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(theme.colors.elev)
+                        .overlay(Capsule().stroke(theme.colors.border, lineWidth: 1.5))
+                )
+        }
+        .buttonStyle(.plain)
+        .help("检查更新")
+    }
+
+    /// 设置入口
+    private var settingsButton: some View {
+        Button {
+            showSettings = true
+        } label: {
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(theme.colors.text1)
+                .frame(width: 26, height: 26)
+                .background(
+                    Circle()
+                        .fill(theme.colors.elev)
+                        .overlay(Circle().stroke(theme.colors.border, lineWidth: 1.5))
+                )
+        }
+        .buttonStyle(.plain)
+        .help("设置")
     }
 
     // MARK: - 气泡 + 实时释放量

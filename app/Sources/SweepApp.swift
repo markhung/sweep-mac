@@ -5,6 +5,7 @@ import AppKit
 struct SweepApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var appState = AppState()
+    @Environment(\.openWindow) private var openWindow
 
     init() {
         // 尽早注册随包圆体，确保 SwiftUI 渲染前字体已可用
@@ -13,7 +14,7 @@ struct SweepApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Sweep") {
+        WindowGroup(id: "main") {
             MainView(appState: appState)
                 .fixedSize()
                 .onAppear { appState.bootstrapPermission() }
@@ -23,6 +24,12 @@ struct SweepApp: App {
         .commands {
             // 这是单窗口工具，不需要「新建」
             CommandGroup(replacing: .newItem) {}
+        }
+
+        MenuBarExtra("Sweep", systemImage: "sparkle", isInserted: $appState.showInMenuBar) {
+            Button("打开 Sweep") { openWindow(id: "main") }
+            Divider()
+            Button("退出") { NSApp.terminate(nil) }
         }
     }
 }
@@ -46,7 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        // 常驻菜单栏开启时，关闭主窗口不退出应用（仍驻留菜单栏）
+        !UserDefaults.standard.bool(forKey: "Sweep.showInMenuBar")
     }
 
     private func applyDockIcon(name: String) {

@@ -10,6 +10,10 @@ struct HintPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
+            Text("待扫描")
+                .font(theme.fonts.body(11, .bold))
+                .tracking(0.6)
+                .foregroundStyle(theme.colors.text2)
             Text("我会帮你扫干净这些地方")
                 .font(theme.fonts.body(11, .bold))
                 .tracking(0.6)

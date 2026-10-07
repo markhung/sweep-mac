@@ -6,6 +6,18 @@ enum Pose {
     case idle, cheer, done
 }
 
+/// 删除方式：直接删除（permanent）或移至废纸篓（trash）
+enum DeleteMode: String, CaseIterable {
+    case direct = "permanent"
+    case trash = "trash"
+    var label: String {
+        switch self {
+        case .direct: return "直接删除"
+        case .trash:  return "移至废纸篓"
+        }
+    }
+}
+
 /// 界面状态机 + 进度模型。
 ///
 /// 进度不是假的：模块边界来自引擎真实输出（`➤` 行），
@@ -21,7 +33,7 @@ final class AppState: ObservableObject {
     @Published private(set) var entries: [LogEntry] = []
     @Published private(set) var reports: [ModuleReport] = []
     @Published private(set) var reclaimedBytes: Int64 = 0
-    @Published private(set) var bubbleText = "点我，开始清扫吧！"
+    @Published private(set) var bubbleText = "点击开始，全程在本机完成 · 可随时停止"
     @Published private(set) var pose: Pose = .idle
     @Published private(set) var diskSummary = "正在读取磁盘信息…"
     @Published private(set) var report: CleanReport?
@@ -29,6 +41,21 @@ final class AppState: ObservableObject {
 
     /// 「查看详情」是否展开
     @Published var showDetail = false
+
+    // MARK: - 用户设置（持久化到 UserDefaults）
+
+    @Published var deleteMode: DeleteMode = .direct {
+        didSet { UserDefaults.standard.set(deleteMode.rawValue, forKey: "Sweep.deleteMode") }
+    }
+    @Published var launchAtLogin: Bool = false {
+        didSet {
+            UserDefaults.standard.set(launchAtLogin, forKey: "Sweep.launchAtLogin")
+            LoginController.setLaunchAtLogin(launchAtLogin)
+        }
+    }
+    @Published var showInMenuBar: Bool = false {
+        didSet { UserDefaults.standard.set(showInMenuBar, forKey: "Sweep.showInMenuBar") }
+    }
 
     // MARK: - 首次启动的权限引导
 
@@ -90,6 +117,10 @@ final class AppState: ObservableObject {
             cumulativeBefore[name] = running
             running += Self.moduleWeights[name] ?? 0
         }
+        deleteMode = DeleteMode(rawValue: UserDefaults.standard.string(forKey: "Sweep.deleteMode") ?? "") ?? .direct
+        launchAtLogin = UserDefaults.standard.bool(forKey: "Sweep.launchAtLogin")
+        showInMenuBar = UserDefaults.standard.bool(forKey: "Sweep.showInMenuBar")
+        LoginController.setLaunchAtLogin(launchAtLogin)
     }
 
     // MARK: - 权限引导
@@ -185,14 +216,14 @@ final class AppState: ObservableObject {
         currentModuleEN = nil
         diskBeforeBytes = nil
         pose = .cheer
-        bubbleText = "开工！先摸一遍家底～"
+        bubbleText = "正在清理中…"
         phase = .running
         moduleStart = Date()
         runStart = Date()
 
         startTicker()
 
-        engine.start(dryRun: false) { [weak self] event in
+        engine.start(dryRun: false, deleteMode: deleteMode.rawValue) { [weak self] event in
             guard let self, self.runToken == token else { return }
             self.handle(event)
         }
@@ -219,7 +250,7 @@ final class AppState: ObservableObject {
         showDetail = false
         errorText = nil
         pose = .idle
-        bubbleText = "点我，开始清扫吧！"
+        bubbleText = "点击开始，全程在本机完成 · 可随时停止"
         stopTicker()
     }
 
@@ -374,6 +405,11 @@ final class AppState: ObservableObject {
 
     // MARK: - 展示辅助
 
+    /// 当前版本号（来自 Info.plist）
+    var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
     /// 顶部/气泡下方的实时释放量
     var releasedText: String {
         reclaimedBytes > 0 ? "已释放 \(SizeFormat.human(reclaimedBytes))" : ""
@@ -385,7 +421,7 @@ final class AppState: ObservableObject {
     }
 
     /// 结果页文案
-    var resultTitle: String { report?.cancelled == true ? "这次扫到一半就停下了" : "这次帮你腾出了" }
+    var resultTitle: String { report?.cancelled == true ? "已强制停止" : "已清理干净" }
 
     var resultSize: (value: String, unit: String) {
         SizeFormat.split(report?.effectiveReclaimedBytes ?? 0)

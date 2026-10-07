@@ -35,7 +35,7 @@ final class CleanEngine {
 
     // MARK: - 启动
 
-    func start(dryRun: Bool = false, onEvent: @escaping (Event) -> Void) {
+    func start(dryRun: Bool = false, deleteMode: String = "permanent", onEvent: @escaping (Event) -> Void) {
         stop()
 
         let process = Process()
@@ -47,6 +47,7 @@ final class CleanEngine {
         env["HOME"] = NSHomeDirectory()
         // 清掉可能来自父进程的痕迹，保证「真实清理」不会被误变成预览
         env.removeValue(forKey: "MOLE_DRY_RUN")
+        env["MOLE_DELETE_MODE"] = deleteMode
         process.environment = env
         process.currentDirectoryURL = URL(fileURLWithPath: NSHomeDirectory())
 
