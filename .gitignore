@@ -22,3 +22,4 @@ app/build/t/
 .workbuddy/
 # Product design documents (not committed to GitHub)
 docs/
+design/

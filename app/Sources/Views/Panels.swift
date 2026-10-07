@@ -6,7 +6,7 @@ struct HintPanel: View {
 
 
     private let chips = ["应用缓存", "系统日志", "开发者工具", "浏览器", "应用残留", "大文件"]
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -70,7 +70,7 @@ struct LogPanel: View {
     var scrollable = true
 
 
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
     private var trailingPadding: CGFloat { theme.mascot.isVisible ? 102 : 16 }
 
     var body: some View {
@@ -195,7 +195,7 @@ struct ResultPanel: View {
     let size: (value: String, unit: String)
 
 
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
 
     var body: some View {
         VStack(spacing: 0) {

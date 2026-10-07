@@ -6,10 +6,16 @@ struct DialView: View {
     @ObservedObject var state: AppState
 
     var onTap: () -> Void
+    var onPause: @MainActor () -> Void = {}
 
     private let size: CGFloat = 196
     private var clickable: Bool { state.phase == .idle || state.phase == .done }
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
+    private var _hovering = State(initialValue: false)
+    private var hovering: Bool {
+        get { _hovering.wrappedValue }
+        nonmutating set { _hovering.wrappedValue = newValue }
+    }
 
     var body: some View {
         ZStack {
@@ -61,6 +67,9 @@ struct DialView: View {
         }
         .animation(.easeInOut(duration: 0.4), value: state.phase)
         .help(helpText)
+        .onHover { inside in
+            withAnimation(.easeInOut(duration: 0.18)) { hovering = inside }
+        }
     }
 
     private var helpText: String {
@@ -80,13 +89,38 @@ struct DialView: View {
                 .transition(.scale.combined(with: .opacity))
 
         case .running:
-            PercentLabel(percent: state.percent, theme: theme)
-                .transition(.scale.combined(with: .opacity))
+            ZStack {
+                PercentLabel(percent: state.percent, theme: theme)
+                    .opacity(hovering ? 0 : 1)
+                    .animation(.easeInOut(duration: 0.18), value: hovering)
+                if hovering {
+                    pauseButton
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
 
         case .done:
             RoundLabel(text: "完成", theme: theme)
                 .transition(.scale.combined(with: .opacity))
         }
+    }
+
+    /// 运行中 hover 出现的暂停按钮：点击立即强制退出清理
+    private var pauseButton: some View {
+        Button {
+            onPause()
+        } label: {
+            Image(systemName: "pause.fill")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 48, height: 48)
+                .background(
+                    Circle()
+                        .fill(theme.colors.primaryBtn)
+                        .shadow(color: theme.colors.accent.opacity(0.45), radius: 8, x: 0, y: 4)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -173,7 +207,7 @@ struct MascotView: View {
     let pose: Pose
 
 
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
 
     /// 静态缓存：MainView 运行期间每秒刷新多次，
     /// 不能每次 body 都去磁盘解码 PNG
@@ -254,7 +288,7 @@ struct BubbleView: View {
     let text: String
 
 
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
 
     var body: some View {
         Text(text)

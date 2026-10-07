@@ -86,6 +86,8 @@ struct Theme {
     let mascot: MascotConfig
     let dial: DialStyle
     let backgroundImageName: String?
+    /// 字标是否用猫系镂空描边（true=猫系粉；false=设计系统琥珀实心）
+    let cutoutBrand: Bool
 }
 
 extension Theme {
@@ -140,9 +142,92 @@ extension Theme {
                 haloOpacity: 0.38,
                 shadowColor: Color(hex: 0xFF9EC4, alpha: 0.40)
             ),
-            backgroundImageName: "bg-necogirl"
+            backgroundImageName: "bg-necogirl",
+            cutoutBrand: true
         )
     }()
+
+    // MARK: - 设计系统主题（琥珀深色科技风，基于 Sweep 设计系统 v1.0）
+    ///
+    /// 该主题代码已就绪，但默认不启用、且前端不暴露任何切换入口（隐藏）。
+    /// 后续如需启用，将 `Theme.selected` 改为 `.designSystem` 即可全量切换。
+    static let designSystem: Theme = {
+        let amberHi = Color(hex: 0xFFC24D)
+        let amber    = Color(hex: 0xFFB224)
+        let amberLo  = Color(hex: 0xFF7A18)
+        let mint     = Color(hex: 0x68E0A4)
+
+        return Theme(
+            colors: ThemeColors(
+                bg:         Color(hex: 0x0F0F12),
+                panel:      Color(hex: 0x141418),
+                elev:       Color(hex: 0x1B1B20),
+                elev2:      Color(hex: 0x1B1B20),
+                border:     Color(hex: 0x26262D),
+                borderSoft: Color(hex: 0x1E1E24),
+                text0:      Color(hex: 0xF5F4F1),
+                text1:      Color(hex: 0xF5F4F1, alpha: 0.68),
+                text2:      Color(hex: 0xF5F4F1, alpha: 0.50),
+                accent:     amber,
+                accent2:    amberLo,
+                track:      Color(hex: 0x26262D),
+                ok:         mint,
+                okGlow:     Color(hex: 0x68E0A4, alpha: 0.55),
+                warn:       amberHi,
+                glow:       Color(hex: 0xFFB224, alpha: 0.40),
+                ringRun:    LinearGradient(colors: [amberHi, Color(hex: 0xFF9A1F)],
+                                          startPoint: .topLeading, endPoint: .bottomTrailing),
+                ringDone:   LinearGradient(colors: [mint, Color(hex: 0x9CF0C8)],
+                                          startPoint: .topLeading, endPoint: .bottomTrailing),
+                primaryBtn: LinearGradient(colors: [amberHi, Color(hex: 0xFF9A1F)],
+                                          startPoint: .top, endPoint: .bottom),
+                brand:      LinearGradient(colors: [amberHi, Color(hex: 0xFF9A1F)],
+                                          startPoint: .top, endPoint: .bottom)
+            ),
+            fonts: ThemeFonts(
+                dialCenter:  { SweepFont.body($0, weight: .medium) },
+                percent:     { SweepFont.body($0, weight: .medium) },
+                percentUnit: { SweepFont.body($0, weight: .bold) },
+                body:        { SweepFont.body($0, weight: $1) }
+            ),
+            mascot: MascotConfig(
+                isVisible: false,
+                idleSize: CGSize(width: 94, height: 132),
+                cheerSize: CGSize(width: 104, height: 146),
+                doneSize: CGSize(width: 94, height: 132)
+            ),
+            dial: DialStyle(
+                showBreatheHalo: false,
+                showRotatingDashedHalo: true,
+                showSparkleHead: false,
+                haloColor: amber,
+                haloLineWidth: 2.5,
+                haloOpacity: 0.30,
+                shadowColor: Color(hex: 0xFFB224, alpha: 0.30)
+            ),
+            backgroundImageName: nil,
+            cutoutBrand: false
+        )
+    }()
+
+    // MARK: - 轻量主题选择（前端不暴露切换入口）
+
+    /// 可用主题。注意：UI 层不提供任何切换控件，当前始终为猫系。
+    enum AppTheme: String, CaseIterable {
+        case anime
+        case designSystem
+    }
+
+    /// 当前生效主题。默认猫系；设计系统主题已就绪但隐藏，不提供切换 UI。
+    static var selected: AppTheme = .anime
+
+    /// 所有视图统一通过这里取主题，未来启用设计系统只需改 `selected`。
+    static var current: Theme {
+        switch selected {
+        case .anime:        return .anime
+        case .designSystem: return .designSystem
+        }
+    }
 }
 
 // MARK: - 字体注册（猫系圆体）

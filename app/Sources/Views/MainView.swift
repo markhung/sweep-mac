@@ -9,7 +9,12 @@ struct MainView: View {
     ///  - 释放行19 - 面板上边距12 - 按钮51 - 下18 = 202
     private let panelHeight: CGFloat = 202
 
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
+    private var _showStopConfirm = State(initialValue: false)
+    private var showStopConfirm: Bool {
+        get { _showStopConfirm.wrappedValue }
+        nonmutating set { _showStopConfirm.wrappedValue = newValue }
+    }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -19,7 +24,7 @@ struct MainView: View {
                 titleBar
 
                 VStack(spacing: 0) {
-                    DialView(state: appState) { appState.start() }
+                    DialView(state: appState, onTap: { appState.start() }, onPause: { appState.cancel() })
                         .frame(height: 196)
 
                     bubbleRow
@@ -60,6 +65,11 @@ struct MainView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: appState.phase)
         .animation(.easeInOut(duration: 0.25), value: appState.showOnboarding)
+        .overlay {
+            if showStopConfirm {
+                stopConfirmCard
+            }
+        }
     }
 
     // MARK: - 未授权常驻提示条
@@ -150,7 +160,7 @@ struct MainView: View {
         .padding(.top, 3)
         .overlay(alignment: .trailing) {
             // 运行中才出现的「停止」出口（Esc 同效）
-            Button("停止") { appState.cancel() }
+            Button("停止") { showStopConfirm = true }
                 .buttonStyle(.plain)
                 .font(theme.fonts.body(11, .semibold))
                 .foregroundStyle(theme.colors.text2)
@@ -226,5 +236,80 @@ struct MainView: View {
         .padding(.top, 13)
         .opacity(appState.phase == .done ? 1 : 0)
         .allowsHitTesting(appState.phase == .done)
+    }
+
+    // MARK: - 停止清理二次确认弹窗
+
+    private var stopConfirmCard: some View {
+        ZStack {
+            Color(hex: 0x000000, alpha: 0.30)
+                .frame(width: windowSize.width, height: windowSize.height)
+                .allowsHitTesting(true)
+
+            VStack(spacing: 14) {
+                Text("确定要停止清理吗？")
+                    .font(theme.fonts.dialCenter(18))
+                    .foregroundStyle(theme.colors.text0)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
+
+                Text("已经清掉的部分会保留，剩下的文件不会再扫。")
+                    .font(theme.fonts.body(12, .medium))
+                    .foregroundStyle(theme.colors.text1)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: 232)
+
+                HStack(spacing: 12) {
+                    Button {
+                        showStopConfirm = false
+                    } label: {
+                        Text("继续清理")
+                            .font(theme.fonts.body(13, .semibold))
+                            .foregroundStyle(theme.colors.text0)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                            .background(
+                                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                    .fill(theme.colors.elev)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                            .stroke(theme.colors.border, lineWidth: 2)
+                                    )
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        appState.cancel()
+                        showStopConfirm = false
+                    } label: {
+                        Text("停止清理")
+                            .font(theme.fonts.body(13, .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                            .background(
+                                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                    .fill(theme.colors.primaryBtn)
+                                    .shadow(color: theme.colors.accent.opacity(0.4), radius: 8, x: 0, y: 4)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(width: 252)
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(theme.colors.panel)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(theme.colors.border, lineWidth: 2)
+                    )
+            )
+            .shadow(color: theme.colors.text0.opacity(0.18), radius: 18, x: 0, y: 8)
+        }
+        .frame(width: windowSize.width, height: windowSize.height)
     }
 }

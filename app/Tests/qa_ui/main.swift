@@ -216,6 +216,19 @@ struct QAUI {
             check("找不到圆体字体，无法校验子集", false)
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // 设计系统主题（隐藏，默认不启用）：冒烟渲染，确保可实例化、不崩溃
+        // ─────────────────────────────────────────────────────────────────
+        Theme.selected = .designSystem
+        let ds = AppState()
+        ds.applyDetectedPermission(.granted)
+        ds.enterRunningVisual(percent: 0.62)
+        render(MainView(appState: ds), to: tmp + "/qa-designsystem.png")
+        let dsExists = FileManager.default.fileExists(atPath: tmp + "/qa-designsystem.png")
+        check("设计系统主题可渲染（隐藏主题冒烟通过）", dsExists)
+        Theme.selected = .anime
+        try? FileManager.default.removeItem(atPath: tmp + "/qa-designsystem.png")
+
         // 还原：不把测试用的标记留在用户 defaults
         clean()
         try? FileManager.default.removeItem(atPath: tmp + "/qa-overlay-on.png")

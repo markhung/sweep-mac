@@ -10,7 +10,7 @@ struct OnboardingView: View {
     @ObservedObject var appState: AppState
 
 
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
 
     // MARK: - 手工 State
 
@@ -298,7 +298,7 @@ private struct PrimaryButton: View {
 
     let action: () -> Void
 
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
 
     var body: some View {
         Button(action: action) {
@@ -322,7 +322,7 @@ private struct SecondaryButton: View {
 
     let action: () -> Void
 
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
 
     var body: some View {
         Button(action: action) {
@@ -349,7 +349,7 @@ private struct LinkButton: View {
 
     let action: () -> Void
 
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
 
     var body: some View {
         Button(action: action) {

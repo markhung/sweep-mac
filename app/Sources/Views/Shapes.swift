@@ -94,30 +94,33 @@ struct SweepGlyphLines: Shape {
 struct BrandMark: View {
     var width: CGFloat = 74
     var height: CGFloat = 16.2
-    private var theme: Theme { Theme.anime }
+    private var theme: Theme { Theme.current }
     private var scale: CGFloat { min(width / 505, height / 100) }
     private var outerLine: CGFloat { 34 * scale }
     private var innerLine: CGFloat { 20 * scale }
 
     var body: some View {
-        animeBrand
+        brandView
         .frame(width: width, height: height)
     }
 
-    private var animeBrand: some View {
+    private var brandView: some View {
         ZStack {
             SweepGlyphLines()
                 .stroke(style: StrokeStyle(lineWidth: outerLine, lineCap: .round, lineJoin: .round))
                 .foregroundStyle(theme.colors.brand)
 
-            SweepGlyphLines()
-                .stroke(style: StrokeStyle(lineWidth: innerLine, lineCap: .round, lineJoin: .round))
-                .foregroundStyle(Color.black)
-                .blendMode(.destinationOut)
+            if theme.cutoutBrand {
+                SweepGlyphLines()
+                    .stroke(style: StrokeStyle(lineWidth: innerLine, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(Color.black)
+                    .blendMode(.destinationOut)
+            }
         }
         .compositingGroup()
-        .shadow(color: .white.opacity(0.85), radius: 1, x: 0, y: 0)
-        .shadow(color: Color(hex: 0xF2549B, alpha: 0.38), radius: 1.2, x: 0, y: 1.6)
+        .shadow(color: theme.cutoutBrand ? .white.opacity(0.85) : .clear, radius: 1, x: 0, y: 0)
+        .shadow(color: theme.cutoutBrand ? Color(hex: 0xF2549B, alpha: 0.38) : Color(hex: 0xFFB224, alpha: 0.35),
+                radius: 1.2, x: 0, y: 1.6)
     }
 
 }
