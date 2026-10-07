@@ -218,8 +218,9 @@ extension Theme {
         case designSystem
     }
 
-    /// 当前生效主题。默认猫系；设计系统主题已就绪但隐藏，不提供切换 UI。
-    static var selected: AppTheme = .anime
+    /// 当前生效主题。默认设计系统（琥珀深色科技风）；猫系主题代码保留但暂不启用，
+    /// 且 UI 层不提供任何切换控件（前端不支持选择）。
+    static var selected: AppTheme = .designSystem
 
     /// 所有视图统一通过这里取主题，未来启用设计系统只需改 `selected`。
     static var current: Theme {

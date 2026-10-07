@@ -226,7 +226,7 @@ struct QAUI {
         render(MainView(appState: ds), to: tmp + "/qa-designsystem.png")
         let dsExists = FileManager.default.fileExists(atPath: tmp + "/qa-designsystem.png")
         check("设计系统主题可渲染（隐藏主题冒烟通过）", dsExists)
-        Theme.selected = .anime
+        Theme.selected = .designSystem
         try? FileManager.default.removeItem(atPath: tmp + "/qa-designsystem.png")
 
         // 还原：不把测试用的标记留在用户 defaults
