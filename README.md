@@ -38,8 +38,11 @@ cd app
 ```bash
 cd app
 # 解析器回归 + 分片一致性测试
-swiftc -O -parse-as-library -target arm64-apple-macos13.0 \
-  Sources/*.swift Sources/Views/*.swift Tests/parser/main.swift \
+# 注意：测试文件含顶层语句，不能用 -parse-as-library；
+# 也只需编译解析器依赖的最小集合，避免混入带 @main 入口的 App 源码。
+swiftc -O -target arm64-apple-macos13.0 \
+  Sources/Models.swift Sources/MoleText.swift Sources/StreamParser.swift \
+  Tests/parser/main.swift \
   -o build/parse_test && ./build/parse_test
 
 # FDA 权限判定单元测试
