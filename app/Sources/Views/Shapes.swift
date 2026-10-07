@@ -90,21 +90,34 @@ struct SweepGlyphLines: Shape {
     }
 }
 
-/// SWEEP 镂空字标：粗描边画出字身，再用 destinationOut 掏出中空，
-/// 最后叠一层白色柔光 + 玫红投影——与图标上的字标同款。
+/// SWEEP 字标：猫系主题用镂空粉渐变，极简科技用单色实心。
 struct BrandMark: View {
     var width: CGFloat = 74
     var height: CGFloat = 16.2
+    @ObservedObject var themeManager: ThemeManager
 
+    private var theme: Theme { themeManager.currentTheme }
     private var scale: CGFloat { min(width / 505, height / 100) }
     private var outerLine: CGFloat { 34 * scale }
-    private var innerLine: CGFloat { 20 * scale }   // 掏空宽度，决定轮廓厚 (34-20)/2
+    private var innerLine: CGFloat { 20 * scale }
 
     var body: some View {
         ZStack {
+            switch theme.brand {
+            case .anime:
+                animeBrand
+            case .minimal:
+                minimalBrand
+            }
+        }
+        .frame(width: width, height: height)
+    }
+
+    private var animeBrand: some View {
+        ZStack {
             SweepGlyphLines()
                 .stroke(style: StrokeStyle(lineWidth: outerLine, lineCap: .round, lineJoin: .round))
-                .foregroundStyle(Palette.brand)
+                .foregroundStyle(theme.colors.brand)
 
             SweepGlyphLines()
                 .stroke(style: StrokeStyle(lineWidth: innerLine, lineCap: .round, lineJoin: .round))
@@ -113,8 +126,13 @@ struct BrandMark: View {
         }
         .compositingGroup()
         .shadow(color: .white.opacity(0.85), radius: 1, x: 0, y: 0)
-        .shadow(color: Palette.brandDeep.opacity(0.38), radius: 1.2, x: 0, y: 1.6)
-        .frame(width: width, height: height)
+        .shadow(color: Color(hex: 0xF2549B, alpha: 0.38), radius: 1.2, x: 0, y: 1.6)
+    }
+
+    private var minimalBrand: some View {
+        SweepGlyphLines()
+            .stroke(style: StrokeStyle(lineWidth: outerLine, lineCap: .round, lineJoin: .round))
+            .foregroundStyle(theme.colors.brand)
     }
 }
 

@@ -2,12 +2,15 @@ import SwiftUI
 
 struct MainView: View {
     @ObservedObject var appState: AppState
+    @ObservedObject var themeManager: ThemeManager
 
     private let windowSize = CGSize(width: 420, height: 600)
     private let titleBarHeight: CGFloat = 44
     /// 面板高度按原型推算：600 - 标题栏44 - 上16 - 圆环196 - 气泡42
     ///  - 释放行19 - 面板上边距12 - 按钮51 - 下18 = 202
     private let panelHeight: CGFloat = 202
+
+    private var theme: Theme { themeManager.currentTheme }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -17,7 +20,7 @@ struct MainView: View {
                 titleBar
 
                 VStack(spacing: 0) {
-                    DialView(state: appState) { appState.start() }
+                    DialView(state: appState, themeManager: themeManager) { appState.start() }
                         .frame(height: 196)
 
                     bubbleRow
@@ -30,20 +33,23 @@ struct MainView: View {
                 .padding(.bottom, 18)
             }
 
-            // 右下角常驻猫娘
-            MascotView(pose: appState.pose)
-                .padding(.trailing, 6)
-                .padding(.bottom, 6)
-                .allowsHitTesting(false)
+            // 右下角 mascot（按主题显隐）
+            if theme.mascot.isVisible {
+                MascotView(pose: appState.pose, themeManager: themeManager)
+                    .padding(.trailing, 6)
+                    .padding(.bottom, 6)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
 
             // 首次启动的权限引导覆盖层（全屏盖住主界面）
             if appState.showOnboarding {
-                OnboardingView(appState: appState)
+                OnboardingView(appState: appState, themeManager: themeManager)
                     .transition(.opacity)
             }
         }
         .frame(width: windowSize.width, height: windowSize.height)
-        .background(Palette.win)
+        .background(theme.colors.bg)
         .overlay(alignment: .top) {
             if appState.showsPermissionBanner {
                 permissionBanner
@@ -59,14 +65,6 @@ struct MainView: View {
 
     // MARK: - 未授权常驻提示条
 
-    /// 方案 (A)：悬浮胶囊，绝对定位覆盖在标题栏下沿、水平居中，
-    /// **不参与 VStack 垂直预算**，因此不会把底部按钮挤出窗口。
-    ///
-    /// 垂直预算是按位图逐像素量出来的（见 build/snapshots，x=210pt 列）：
-    ///   品牌字标底 ≈ 30.1pt，圆环外沿顶 = 65.5pt，中间只有 35.4pt 的空档，
-    ///   而胶囊 26pt 放不下 —— 只能往两头借。取「胶囊高 24 + 顶部留白 35」：
-    ///   胶囊占 y 35..59，距字标 ≈4.9pt、距圆环顶 ≈6.5pt，两头都不压。
-    /// 点击可重新进入引导。
     private var permissionBanner: some View {
         Button {
             appState.presentOnboarding()
@@ -74,24 +72,24 @@ struct MainView: View {
             HStack(spacing: 8) {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Palette.c1)
+                    .foregroundStyle(theme.colors.accent)
                 Text("开启完全磁盘访问权限，扫得更干净")
-                    .font(SweepFont.body(11.5, weight: .semibold))
-                    .foregroundStyle(Palette.text0)
+                    .font(theme.fonts.body(11.5, .semibold))
+                    .foregroundStyle(theme.colors.text0)
                     .lineLimit(1)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(Palette.text2)
+                    .foregroundStyle(theme.colors.text2)
             }
             .padding(.leading, 13)
             .padding(.trailing, 11)
             .frame(height: 26)
             .background(
                 Capsule()
-                    .fill(Palette.elev)
-                    .overlay(Capsule().stroke(Palette.border, lineWidth: 1.5))
+                    .fill(theme.colors.elev)
+                    .overlay(Capsule().stroke(theme.colors.border, lineWidth: 1.5))
             )
-            .shadow(color: Color(hex: 0x4A3F55, alpha: 0.12), radius: 6, x: 0, y: 3)
+            .shadow(color: theme.colors.text0.opacity(0.12), radius: 6, x: 0, y: 3)
         }
         .buttonStyle(.plain)
         .help("重新查看完全磁盘访问权限引导")
@@ -99,13 +97,11 @@ struct MainView: View {
 
     // MARK: - 背景
 
-    /// 注意：aspectRatio(.fill) 会让图片返回比提案更大的尺寸，
-    /// 从而把整个 ZStack 撑大、把兄弟视图挤出版心——必须在这里
-    /// 用固定 frame + clipped 把背景钉死在窗口大小里。
     private var windowBackground: some View {
         ZStack {
-            Palette.win
-            if let bg = Resources.image("bg-necogirl", ext: "jpg") {
+            theme.colors.bg
+            if let name = theme.backgroundImageName,
+               let bg = Resources.image(name, ext: "jpg") {
                 Image(nsImage: bg)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -120,13 +116,21 @@ struct MainView: View {
 
     private var titleBar: some View {
         ZStack {
-            BrandMark(width: 74, height: 16.2)
+            HStack {
+                Spacer()
+                ThemeSwitcher(themeManager: themeManager)
+                    .padding(.trailing, 12)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            BrandMark(width: 74, height: 16.2, themeManager: themeManager)
+                .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity)
         .frame(height: titleBarHeight)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Palette.borderSoft)
+                .fill(theme.colors.borderSoft)
                 .frame(height: 2)
         }
     }
@@ -134,7 +138,7 @@ struct MainView: View {
     // MARK: - 气泡 + 实时释放量
 
     private var bubbleRow: some View {
-        BubbleView(text: appState.bubbleText)
+        BubbleView(text: appState.bubbleText, themeManager: themeManager)
             .frame(height: 36)
             .padding(.top, 6)
     }
@@ -144,9 +148,9 @@ struct MainView: View {
             Spacer()
             if !appState.releasedText.isEmpty {
                 Text(appState.releasedText)
-                    .font(.system(size: 11.5, weight: .semibold))
+                    .font(theme.fonts.body(11.5, .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(Palette.text1)
+                    .foregroundStyle(theme.colors.text1)
             }
             Spacer()
         }
@@ -156,8 +160,8 @@ struct MainView: View {
             // 运行中才出现的「停止」出口（Esc 同效）
             Button("停止") { appState.cancel() }
                 .buttonStyle(.plain)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Palette.text2)
+                .font(theme.fonts.body(11, .semibold))
+                .foregroundStyle(theme.colors.text2)
                 .opacity(appState.phase == .running ? 1 : 0)
                 .allowsHitTesting(appState.phase == .running)
                 .help("停止本次清理")
@@ -169,20 +173,21 @@ struct MainView: View {
     private var panel: some View {
         ZStack {
             if appState.showDetail, !appState.reports.isEmpty {
-                LogPanel(entries: appState.entries, grouped: appState.reports)
+                LogPanel(entries: appState.entries, grouped: appState.reports, themeManager: themeManager)
             } else {
                 switch appState.phase {
                 case .idle, .failed:
-                    HintPanel()
+                    HintPanel(themeManager: themeManager)
                 case .running:
-                    LogPanel(entries: appState.entries, grouped: nil)
+                    LogPanel(entries: appState.entries, grouped: nil, themeManager: themeManager)
                 case .done:
                     if let report = appState.report {
                         ResultPanel(report: report,
                                     title: appState.resultTitle,
-                                    size: appState.resultSize)
+                                    size: appState.resultSize,
+                                    themeManager: themeManager)
                     } else {
-                        LogPanel(entries: appState.entries, grouped: nil)
+                        LogPanel(entries: appState.entries, grouped: nil, themeManager: themeManager)
                     }
                 }
             }
@@ -190,10 +195,10 @@ struct MainView: View {
         .frame(height: panelHeight)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Palette.panel)
+                .fill(theme.colors.panel)
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Palette.borderSoft, lineWidth: 2)
+                        .stroke(theme.colors.borderSoft, lineWidth: 2)
                 )
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -202,7 +207,7 @@ struct MainView: View {
         .animation(.easeInOut(duration: 0.32), value: appState.showDetail)
     }
 
-    // MARK: - 底部按钮（宽度右退 100 给猫娘让位）
+    // MARK: - 底部按钮
 
     private var actions: some View {
         HStack {
@@ -210,23 +215,23 @@ struct MainView: View {
                 appState.showDetail.toggle()
             } label: {
                 Text(appState.showDetail ? "收起日志" : "查看详情")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Palette.text0)
+                    .font(theme.fonts.body(13, .bold))
+                    .foregroundStyle(theme.colors.text0)
                     .frame(maxWidth: .infinity)
                     .frame(height: 34)
                     .background(
                         RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .fill(Palette.elev)
+                            .fill(theme.colors.elev)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 13, style: .continuous)
-                                    .stroke(Palette.border, lineWidth: 2)
+                                    .stroke(theme.colors.border, lineWidth: 2)
                             )
                     )
             }
             .buttonStyle(.plain)
         }
         .frame(height: 38)
-        .padding(.trailing, 100)
+        .padding(.trailing, theme.mascot.isVisible ? 100 : 0)
         .padding(.top, 13)
         .opacity(appState.phase == .done ? 1 : 0)
         .allowsHitTesting(appState.phase == .done)

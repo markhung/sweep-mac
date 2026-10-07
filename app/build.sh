@@ -19,6 +19,13 @@ swiftc -O -parse-as-library \
 echo "▸ 装配资源…"
 cp "$DIR/Resources/Info.plist"  "$APP/Contents/Info.plist"
 cp "$DIR/Resources/Sweep.icns"  "$APP/Contents/Resources/Sweep.icns"
+# 极简科技主题图标
+if [[ -f "$DIR/Resources/SweepMinimalLight.icns" ]]; then
+  cp "$DIR/Resources/SweepMinimalLight.icns" "$APP/Contents/Resources/SweepMinimalLight.icns"
+fi
+if [[ -f "$DIR/Resources/SweepMinimalDark.icns" ]]; then
+  cp "$DIR/Resources/SweepMinimalDark.icns" "$APP/Contents/Resources/SweepMinimalDark.icns"
+fi
 cp -R "$DIR/Resources/assets"   "$APP/Contents/Resources/assets"
 cp -R "$DIR/Resources/fonts"    "$APP/Contents/Resources/fonts"
 cp -R "$DIR/Resources/mole"     "$APP/Contents/Resources/mole"

@@ -3,23 +3,26 @@ import SwiftUI
 // MARK: - 待机提示
 
 struct HintPanel: View {
+    @ObservedObject var themeManager: ThemeManager
+
     private let chips = ["应用缓存", "系统日志", "开发者工具", "浏览器", "应用残留", "大文件"]
+    private var theme: Theme { themeManager.currentTheme }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             Text("我会帮你扫干净这些地方")
-                .font(.system(size: 11, weight: .bold))
+                .font(theme.fonts.body(11, .bold))
                 .tracking(0.6)
-                .foregroundStyle(Palette.text2)
+                .foregroundStyle(theme.colors.text2)
 
-            FlowChips(items: chips)
+            FlowChips(items: chips, theme: theme)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("全部在本机完成，不联网。")
                 Text("只管用户级内容，") + Text("不会向你要管理员密码").bold() + Text("。")
             }
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(Palette.text2)
+            .font(theme.fonts.body(11, .medium))
+            .foregroundStyle(theme.colors.text2)
             .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -30,21 +33,21 @@ struct HintPanel: View {
 /// 简单的换行 chip 布局
 private struct FlowChips: View {
     let items: [String]
+    let theme: Theme
 
     var body: some View {
-        // 每个 chip 约 74pt 宽，一行放 4 个；用固定三行堆叠保证在小窗口里稳定
         VStack(alignment: .leading, spacing: 6) {
             ForEach(rows, id: \.self) { row in
                 HStack(spacing: 6) {
                     ForEach(row, id: \.self) { item in
                         Text(item)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Palette.text1)
+                            .font(theme.fonts.body(11, .semibold))
+                            .foregroundStyle(theme.colors.text1)
                             .padding(.vertical, 3.5)
                             .padding(.horizontal, 10)
                             .background(
-                                Capsule().fill(Palette.elev)
-                                    .overlay(Capsule().stroke(Palette.border, lineWidth: 1.5))
+                                Capsule().fill(theme.colors.elev)
+                                    .overlay(Capsule().stroke(theme.colors.border, lineWidth: 1.5))
                             )
                     }
                 }
@@ -63,29 +66,29 @@ private struct FlowChips: View {
 
 struct LogPanel: View {
     let entries: [LogEntry]
-    /// 是否显示模块明细（结果页的「查看详情」）
     var grouped: [ModuleReport]?
-    /// 仅供离屏快照自检：ImageRenderer 渲染不出 ScrollView 的内容，
-    /// 关掉滚动容器才能在快照里核对日志样式。真实界面恒为 true。
     var scrollable = true
+    @ObservedObject var themeManager: ThemeManager
+
+    private var theme: Theme { themeManager.currentTheme }
+    private var trailingPadding: CGFloat { theme.mascot.isVisible ? 102 : 16 }
 
     var body: some View {
         let rows = Group {
             if let grouped {
                 ForEach(grouped) { report in
                     if !report.items.isEmpty {
-                        LogRow(entry: LogEntry(kind: .section, text: report.name))
+                        LogRow(entry: LogEntry(kind: .section, text: report.name), theme: theme)
                         ForEach(report.items) { item in
-                            LogRow(entry: item)
+                            LogRow(entry: item, theme: theme)
                         }
                     }
                 }
             } else {
                 ForEach(Array(entries.enumerated()), id: \.element.id) { idx, entry in
-                    LogRow(entry: entry, isFirst: idx == 0)
+                    LogRow(entry: entry, isFirst: idx == 0, theme: theme)
                         .id(entry.id)
                 }
-                // 滚动锚点
                 Color.clear.frame(height: 1).id("bottom")
             }
         }
@@ -97,7 +100,7 @@ struct LogPanel: View {
                         .padding(.top, 10)
                         .padding(.bottom, 14)
                         .padding(.leading, 13)
-                        .padding(.trailing, 102)   // 右侧给右下角的猫娘让位
+                        .padding(.trailing, trailingPadding)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .onChange(of: entries.count) { _ in
@@ -111,7 +114,7 @@ struct LogPanel: View {
                 .padding(.top, 10)
                 .padding(.bottom, 14)
                 .padding(.leading, 13)
-                .padding(.trailing, 102)
+                .padding(.trailing, trailingPadding)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
         }
@@ -121,32 +124,33 @@ struct LogPanel: View {
 struct LogRow: View {
     let entry: LogEntry
     var isFirst: Bool = false
+    let theme: Theme
 
     var body: some View {
         HStack(spacing: 8) {
             Text(mark)
-                .font(.system(size: 11, weight: .bold))
+                .font(theme.fonts.body(11, .bold))
                 .foregroundStyle(markColor)
                 .frame(width: 14)
             Text(displayText)
-                .font(.system(size: entry.kind == .section ? 11 : 12,
-                              weight: entry.kind == .section ? .bold : .medium))
+                .font(theme.fonts.body(entry.kind == .section ? 11 : 12,
+                                      entry.kind == .section ? .bold : .medium))
                 .tracking(entry.kind == .section ? 0.5 : 0)
-                .foregroundStyle(isDim ? Palette.text2 : Palette.text0)
+                .foregroundStyle(isDim ? theme.colors.text2 : theme.colors.text0)
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 6)
             if let note = entry.note {
                 Text(note)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Palette.text2)
+                    .font(theme.fonts.body(11, .medium))
+                    .foregroundStyle(theme.colors.text2)
                     .lineLimit(1)
             }
             if let size = entry.size {
                 Text(size)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(theme.fonts.body(11, .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(Palette.text1)
+                    .foregroundStyle(theme.colors.text1)
             }
         }
         .frame(height: entry.kind == .section ? 28 : 25)
@@ -169,10 +173,10 @@ struct LogRow: View {
 
     private var markColor: Color {
         switch entry.kind {
-        case .section: return Palette.c1
-        case .item:    return Palette.ok
-        case .skip:    return Palette.warn
-        case .manual, .empty, .info: return Palette.text2
+        case .section: return theme.colors.accent
+        case .item:    return theme.colors.ok
+        case .skip:    return theme.colors.warn
+        case .manual, .empty, .info: return theme.colors.text2
         case .error:   return Color.red
         }
     }
@@ -189,28 +193,31 @@ struct ResultPanel: View {
     let report: CleanReport
     let title: String
     let size: (value: String, unit: String)
+    @ObservedObject var themeManager: ThemeManager
+
+    private var theme: Theme { themeManager.currentTheme }
 
     var body: some View {
         VStack(spacing: 0) {
             Text(title)
-                .font(.system(size: 11, weight: .bold))
+                .font(theme.fonts.body(11, .bold))
                 .tracking(1)
-                .foregroundStyle(Palette.text2)
+                .foregroundStyle(theme.colors.text2)
 
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(size.value)
-                    .font(.system(size: 40, weight: .heavy))
+                    .font(theme.fonts.percent(40))
                     .monospacedDigit()
-                    .foregroundStyle(Palette.text0)
+                    .foregroundStyle(theme.colors.text0)
                 Text(size.unit)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(Palette.text2)
+                    .font(theme.fonts.body(18, .bold))
+                    .foregroundStyle(theme.colors.text2)
             }
 
             HStack(spacing: 26) {
-                StatColumn(number: "\(report.itemsCleaned)", caption: "清理项")
-                Rectangle().fill(Palette.border).frame(width: 2, height: 26)
-                StatColumn(number: "\(report.categories)", caption: "分类")
+                StatColumn(number: "\(report.itemsCleaned)", caption: "清理项", theme: theme)
+                Rectangle().fill(theme.colors.border).frame(width: 2, height: 26)
+                StatColumn(number: "\(report.categories)", caption: "分类", theme: theme)
             }
             .padding(.top, 12)
 
@@ -227,14 +234,14 @@ struct ResultPanel: View {
             HStack(spacing: 6) {
                 Text("磁盘可用")
                 Text(SizeFormat.human(before)).monospacedDigit()
-                Text("→").foregroundStyle(Palette.text2)
+                Text("→").foregroundStyle(theme.colors.text2)
                 Text(SizeFormat.human(after))
                     .monospacedDigit()
-                    .foregroundStyle(Palette.ok)
+                    .foregroundStyle(theme.colors.ok)
                     .fontWeight(.heavy)
             }
-            .font(.system(size: 11.5, weight: .semibold))
-            .foregroundStyle(Palette.text1)
+            .font(theme.fonts.body(11.5, .semibold))
+            .foregroundStyle(theme.colors.text1)
         } else {
             Color.clear.frame(height: 16)
         }
@@ -244,17 +251,18 @@ struct ResultPanel: View {
 private struct StatColumn: View {
     let number: String
     let caption: String
+    let theme: Theme
 
     var body: some View {
         VStack(spacing: 2) {
             Text(number)
-                .font(.system(size: 19, weight: .heavy))
+                .font(theme.fonts.percent(19))
                 .monospacedDigit()
-                .foregroundStyle(Palette.text0)
+                .foregroundStyle(theme.colors.text0)
             Text(caption)
-                .font(.system(size: 10.5, weight: .semibold))
+                .font(theme.fonts.body(10.5, .semibold))
                 .tracking(0.5)
-                .foregroundStyle(Palette.text2)
+                .foregroundStyle(theme.colors.text2)
         }
     }
 }

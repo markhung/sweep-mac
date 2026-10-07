@@ -4,40 +4,42 @@ import SwiftUI
 
 struct DialView: View {
     @ObservedObject var state: AppState
+    @ObservedObject var themeManager: ThemeManager
     var onTap: () -> Void
 
     private let size: CGFloat = 196
     private var clickable: Bool { state.phase == .idle || state.phase == .done }
+    private var theme: Theme { themeManager.currentTheme }
 
     var body: some View {
         ZStack {
             // 待机：呼吸光环
-            if state.phase == .idle {
-                BreatheHalo().frame(width: size, height: size)
+            if state.phase == .idle, theme.dial.showBreatheHalo {
+                BreatheHalo(theme: theme).frame(width: size, height: size)
             }
 
             // 运行中：外圈旋转虚线
-            if state.phase == .running {
-                RotatingHalo().frame(width: size, height: size)
+            if state.phase == .running, theme.dial.showRotatingDashedHalo {
+                RotatingHalo(theme: theme).frame(width: size, height: size)
             }
 
             // 轨道
             Circle()
-                .stroke(Palette.track, lineWidth: 9)
+                .stroke(theme.colors.track, lineWidth: 9)
                 .frame(width: 176, height: 176)
 
-            // 进度（完成态换绿粉渐变）
+            // 进度（完成态换成功色渐变）
             RingArc(progress: state.percent)
                 .stroke(style: StrokeStyle(lineWidth: 9, lineCap: .round))
-                .foregroundStyle(state.phase == .done ? Palette.ringDone : Palette.ringRun)
+                .foregroundStyle(state.phase == .done ? theme.colors.ringDone : theme.colors.ringRun)
                 .frame(width: 176, height: 176)
 
             // 进度头部的小星星
-            if state.phase == .running, state.percent > 0.02 {
+            if state.phase == .running, state.percent > 0.02, theme.dial.showSparkleHead {
                 SparkleShape()
                     .fill(Color.white)
                     .frame(width: 13, height: 13)
-                    .shadow(color: Palette.c1, radius: 2.5)
+                    .shadow(color: theme.colors.accent, radius: 2.5)
                     .offset(y: -88)
                     .rotationEffect(.degrees(360 * state.percent))
             }
@@ -53,7 +55,7 @@ struct DialView: View {
                 Circle()
                     .stroke(Color.clear, lineWidth: 0)
                     .frame(width: size, height: size)
-                    .shadow(color: Palette.glow, radius: 12)
+                    .shadow(color: theme.dial.shadowColor, radius: 12)
                     .allowsHitTesting(false)
             }
         }
@@ -74,15 +76,15 @@ struct DialView: View {
     private var centerContent: some View {
         switch state.phase {
         case .idle, .failed:
-            RoundLabel(text: "开始", color: Palette.text0, glow: Palette.glow)
+            RoundLabel(text: "开始", theme: theme)
                 .transition(.scale.combined(with: .opacity))
 
         case .running:
-            PercentLabel(percent: state.percent)
+            PercentLabel(percent: state.percent, theme: theme)
                 .transition(.scale.combined(with: .opacity))
 
         case .done:
-            RoundLabel(text: "完成", color: Palette.ok, glow: Palette.okGlow)
+            RoundLabel(text: "完成", theme: theme)
                 .transition(.scale.combined(with: .opacity))
         }
     }
@@ -91,34 +93,33 @@ struct DialView: View {
 /// 圆环中心的圆体大字（开始 / 完成）
 private struct RoundLabel: View {
     let text: String
-    let color: Color
-    let glow: Color
+    let theme: Theme
 
     var body: some View {
         Text(text)
-            .font(SweepFont.round(31))
-            .tracking(9)          // .3em ≈ 9pt
-            .foregroundStyle(color)
+            .font(theme.fonts.dialCenter(31))
+            .tracking(9)
+            .foregroundStyle(theme.colors.text0)
             .fixedSize()
-            // 末尾字符也带字距，会显得偏左，往右补半个字距
             .offset(x: 4.5)
-            .shadow(color: glow, radius: 8)
+            .shadow(color: theme.dial.shadowColor, radius: 8)
     }
 }
 
-/// 中心百分比（圆体数字）
+/// 中心百分比
 private struct PercentLabel: View {
     let percent: Double
+    let theme: Theme
 
     var body: some View {
         let shown = Int((percent * 100).rounded(.down))
         HStack(alignment: .firstTextBaseline, spacing: 1) {
             Text("\(shown)")
-                .font(SweepFont.round(34))
-                .foregroundStyle(Palette.text0)
+                .font(theme.fonts.percent(34))
+                .foregroundStyle(theme.colors.text0)
             Text("%")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(Palette.text2)
+                .font(theme.fonts.percentUnit(16))
+                .foregroundStyle(theme.colors.text2)
         }
         .monospacedDigit()
         .fixedSize()
@@ -126,11 +127,8 @@ private struct PercentLabel: View {
 }
 
 /// 待机呼吸：外圈缓慢放大淡出
-///
-/// 注意：本机只有 Command Line Tools，SwiftUI 的 `@State` 宏插件
-/// （SwiftUIMacros）不在工具链里，`@State` 无法展开。下面手工声明
-/// `State` 存储 —— 与宏展开的产物一致，SwiftUI 依旧能接管它。
 private struct BreatheHalo: View {
+    let theme: Theme
     private var _animate = State(initialValue: false)
     private var animate: Bool {
         get { _animate.wrappedValue }
@@ -139,10 +137,10 @@ private struct BreatheHalo: View {
 
     var body: some View {
         Circle()
-            .stroke(Palette.c1, lineWidth: 2)
+            .stroke(theme.colors.accent, lineWidth: theme.dial.haloLineWidth)
             .frame(width: 186, height: 186)
             .scaleEffect(animate ? 1.06 : 0.94)
-            .opacity(animate ? 0 : 0.35)
+            .opacity(animate ? 0 : theme.dial.haloOpacity)
             .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: animate)
             .onAppear { animate = true }
     }
@@ -150,6 +148,7 @@ private struct BreatheHalo: View {
 
 /// 运行中：虚线光环旋转
 private struct RotatingHalo: View {
+    let theme: Theme
     private var _spin = State(initialValue: false)
     private var spin: Bool {
         get { _spin.wrappedValue }
@@ -158,20 +157,23 @@ private struct RotatingHalo: View {
 
     var body: some View {
         Circle()
-            .stroke(Palette.c1, style: StrokeStyle(lineWidth: 2.5, lineCap: .round,
-                                                   dash: [3, 16]))
+            .stroke(theme.colors.accent2, style: StrokeStyle(lineWidth: 2.5, lineCap: .round,
+                                                             dash: [3, 16]))
             .frame(width: 192, height: 192)
-            .opacity(0.38)
+            .opacity(theme.dial.haloOpacity)
             .rotationEffect(.degrees(spin ? 360 : 0))
             .animation(.linear(duration: 7).repeatForever(autoreverses: false), value: spin)
             .onAppear { spin = true }
     }
 }
 
-// MARK: - 右下角猫娘
+// MARK: - 右下角 mascot
 
 struct MascotView: View {
     let pose: Pose
+    @ObservedObject var themeManager: ThemeManager
+
+    private var theme: Theme { themeManager.currentTheme }
 
     /// 静态缓存：MainView 运行期间每秒刷新多次，
     /// 不能每次 body 都去磁盘解码 PNG
@@ -196,8 +198,8 @@ struct MascotView: View {
 
     private var size: CGSize {
         switch pose {
-        case .cheer: return CGSize(width: 104, height: 146)
-        default:     return CGSize(width: 94, height: 132)
+        case .cheer: return theme.mascot.cheerSize
+        default:     return theme.mascot.idleSize
         }
     }
 
@@ -208,7 +210,7 @@ struct MascotView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: size.width, height: size.height)
-                    .shadow(color: Color(hex: 0x4A3F55, alpha: 0.22), radius: 5, x: 0, y: 5)
+                    .shadow(color: Color(hex: 0x000000, alpha: 0.22), radius: 5, x: 0, y: 5)
                     .offset(y: offsetY)
                     .rotationEffect(.degrees(rotation))
                     .animation(animation, value: floaty)
@@ -250,30 +252,33 @@ struct MascotView: View {
 
 struct BubbleView: View {
     let text: String
+    @ObservedObject var themeManager: ThemeManager
+
+    private var theme: Theme { themeManager.currentTheme }
 
     var body: some View {
         Text(text)
-            .font(.system(size: 12.5, weight: .semibold))
-            .foregroundStyle(Palette.text0)
+            .font(theme.fonts.body(12.5, .semibold))
+            .foregroundStyle(theme.colors.text0)
             .lineLimit(1)
             .padding(.vertical, 6)
             .padding(.horizontal, 14)
             .background(
                 RoundedRectangle(cornerRadius: 15, style: .continuous)
-                    .fill(Palette.elev)
+                    .fill(theme.colors.elev)
                     .overlay(
                         RoundedRectangle(cornerRadius: 15, style: .continuous)
-                            .stroke(Palette.border, lineWidth: 2)
+                            .stroke(theme.colors.border, lineWidth: 2)
                     )
             )
             .overlay(alignment: .top) {
                 // 指向圆环的小尾巴
                 Rectangle()
-                    .fill(Palette.elev)
+                    .fill(theme.colors.elev)
                     .frame(width: 10, height: 10)
                     .overlay(
                         Rectangle()
-                            .stroke(Palette.border, lineWidth: 2)
+                            .stroke(theme.colors.border, lineWidth: 2)
                     )
                     .rotationEffect(.degrees(45))
                     .offset(y: -5)
