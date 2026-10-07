@@ -17,7 +17,7 @@
 
 ## 安装
 
-1. 在 [Releases](https://github.com/YOUR_USERNAME/YOUR_REPO/releases) 下载最新 `Sweep.dmg`。
+1. 在 [Releases](https://github.com/markhung/sweep-mac/releases) 下载最新 `Sweep.dmg`。
 2. 双击挂载 DMG，把 `Sweep.app` 拖到「应用程序」。
 3. 首次打开请在 Finder 中右键 `Sweep.app` →「打开」，并在「系统设置 → 隐私与安全性」中允许。
 
