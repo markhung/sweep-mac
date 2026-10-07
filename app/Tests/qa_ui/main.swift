@@ -174,11 +174,10 @@ struct QAUI {
         let ov = AppState()
         ov.applyDetectedPermission(.denied)
         ov.showOnboarding = true
-        let tm = ThemeManager()
-        render(MainView(appState: ov, themeManager: tm), to: tmp + "/qa-overlay-on.png")
-        render(OnboardingView(appState: ov, themeManager: tm, initialStep: 0), to: tmp + "/qa-onboard-only.png")
+        render(MainView(appState: ov), to: tmp + "/qa-overlay-on.png")
+        render(OnboardingView(appState: ov, initialStep: 0), to: tmp + "/qa-onboard-only.png")
         ov.showOnboarding = false
-        render(MainView(appState: ov, themeManager: tm), to: tmp + "/qa-overlay-off.png")
+        render(MainView(appState: ov), to: tmp + "/qa-overlay-off.png")
 
         let d1 = diffCount(tmp + "/qa-overlay-on.png", tmp + "/qa-onboard-only.png")
         check("D15 引导开启时主界面被完全盖住（与纯引导渲染 0 差异，差异=\(d1)）", d1 == 0)

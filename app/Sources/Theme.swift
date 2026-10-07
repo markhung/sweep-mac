@@ -77,22 +77,15 @@ struct DialStyle {
     let shadowColor: Color
 }
 
-enum BrandStyle {
-    case anime
-    case minimal
-}
-
 // MARK: - 主题
 
+/// 应用目前只有猫系（anime）一套主题，所有视图直接使用 `Theme.anime`。
 struct Theme {
     let colors: ThemeColors
     let fonts: ThemeFonts
     let mascot: MascotConfig
     let dial: DialStyle
-    let brand: BrandStyle
     let backgroundImageName: String?
-    let dockIconName: String
-    let effectiveColorScheme: ColorScheme
 }
 
 extension Theme {
@@ -147,127 +140,7 @@ extension Theme {
                 haloOpacity: 0.38,
                 shadowColor: Color(hex: 0xFF9EC4, alpha: 0.40)
             ),
-            brand: .anime,
-            backgroundImageName: "bg-necogirl",
-            dockIconName: "Sweep",
-            effectiveColorScheme: .light
-        )
-    }()
-
-    static func minimal(scheme: MinimalColorScheme, system: ColorScheme) -> Theme {
-        let isDark = scheme == .dark || (scheme == .system && system == .dark)
-        return isDark ? .minimalDark : .minimalLight
-    }
-
-    static let minimalLight: Theme = {
-        let accent = Color(hex: 0x2563EB)
-        let accent2 = Color(hex: 0x0EA5E9)
-        let ok = Color(hex: 0x10B981)
-
-        return Theme(
-            colors: ThemeColors(
-                bg:        Color(hex: 0xF4F6F9),
-                panel:     Color(hex: 0xFFFFFF, alpha: 0.92),
-                elev:      Color(hex: 0xF1F5F9),
-                elev2:     Color(hex: 0xE2E8F0),
-                border:    Color(hex: 0xE2E8F0),
-                borderSoft:Color(hex: 0xF1F5F9),
-                text0:     Color(hex: 0x111827),
-                text1:     Color(hex: 0x6B7280),
-                text2:     Color(hex: 0x9CA3AF),
-                accent:    accent,
-                accent2:   accent2,
-                track:     Color(hex: 0xE2E8F0),
-                ok:        ok,
-                okGlow:    Color(hex: 0x10B981, alpha: 0.35),
-                warn:      Color(hex: 0xF59E0B),
-                glow:      accent.opacity(0.25),
-                ringRun:   LinearGradient(colors: [accent, accent2], startPoint: .topLeading, endPoint: .bottomTrailing),
-                ringDone:  LinearGradient(colors: [Color(hex: 0x34D399), ok], startPoint: .topLeading, endPoint: .bottomTrailing),
-                primaryBtn:LinearGradient(colors: [accent, accent2], startPoint: .topLeading, endPoint: .bottomTrailing),
-                brand:     LinearGradient(colors: [accent, accent2], startPoint: .top, endPoint: .bottom)
-            ),
-            fonts: ThemeFonts(
-                dialCenter: { size in .system(size: size, weight: .semibold) },
-                percent:    { size in .system(size: size, weight: .bold).monospacedDigit() },
-                percentUnit: { size in .system(size: size, weight: .semibold) },
-                body:       { size, weight in .system(size: size, weight: weight) }
-            ),
-            mascot: MascotConfig(
-                isVisible: false,
-                idleSize: .zero,
-                cheerSize: .zero,
-                doneSize: .zero
-            ),
-            dial: DialStyle(
-                showBreatheHalo: false,
-                showRotatingDashedHalo: true,
-                showSparkleHead: false,
-                haloColor: accent2,
-                haloLineWidth: 1.5,
-                haloOpacity: 0.30,
-                shadowColor: accent.opacity(0.25)
-            ),
-            brand: .minimal,
-            backgroundImageName: nil,
-            dockIconName: "SweepMinimalLight",
-            effectiveColorScheme: .light
-        )
-    }()
-
-    static let minimalDark: Theme = {
-        let accent = Color(hex: 0x3B82F6)
-        let accent2 = Color(hex: 0x38BDF8)
-        let ok = Color(hex: 0x22C55E)
-
-        return Theme(
-            colors: ThemeColors(
-                bg:        Color(hex: 0x0F172A),
-                panel:     Color(hex: 0x1E293B, alpha: 0.92),
-                elev:      Color(hex: 0x1E293B),
-                elev2:     Color(hex: 0x334155),
-                border:    Color(hex: 0x334155),
-                borderSoft:Color(hex: 0x1E293B),
-                text0:     Color(hex: 0xF9FAFB),
-                text1:     Color(hex: 0x9CA3AF),
-                text2:     Color(hex: 0x6B7280),
-                accent:    accent,
-                accent2:   accent2,
-                track:     Color(hex: 0x334155),
-                ok:        ok,
-                okGlow:    Color(hex: 0x22C55E, alpha: 0.35),
-                warn:      Color(hex: 0xFBBF24),
-                glow:      accent.opacity(0.25),
-                ringRun:   LinearGradient(colors: [accent, accent2], startPoint: .topLeading, endPoint: .bottomTrailing),
-                ringDone:  LinearGradient(colors: [Color(hex: 0x4ADE80), ok], startPoint: .topLeading, endPoint: .bottomTrailing),
-                primaryBtn:LinearGradient(colors: [accent, accent2], startPoint: .topLeading, endPoint: .bottomTrailing),
-                brand:     LinearGradient(colors: [accent, accent2], startPoint: .top, endPoint: .bottom)
-            ),
-            fonts: ThemeFonts(
-                dialCenter: { size in .system(size: size, weight: .semibold) },
-                percent:    { size in .system(size: size, weight: .bold).monospacedDigit() },
-                percentUnit: { size in .system(size: size, weight: .semibold) },
-                body:       { size, weight in .system(size: size, weight: weight) }
-            ),
-            mascot: MascotConfig(
-                isVisible: false,
-                idleSize: .zero,
-                cheerSize: .zero,
-                doneSize: .zero
-            ),
-            dial: DialStyle(
-                showBreatheHalo: false,
-                showRotatingDashedHalo: true,
-                showSparkleHead: false,
-                haloColor: accent2,
-                haloLineWidth: 1.5,
-                haloOpacity: 0.30,
-                shadowColor: accent.opacity(0.25)
-            ),
-            brand: .minimal,
-            backgroundImageName: nil,
-            dockIconName: "SweepMinimalDark",
-            effectiveColorScheme: .dark
+            backgroundImageName: "bg-necogirl"
         )
     }()
 }

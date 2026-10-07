@@ -3,10 +3,10 @@ import SwiftUI
 // MARK: - 待机提示
 
 struct HintPanel: View {
-    @ObservedObject var themeManager: ThemeManager
+
 
     private let chips = ["应用缓存", "系统日志", "开发者工具", "浏览器", "应用残留", "大文件"]
-    private var theme: Theme { themeManager.currentTheme }
+    private var theme: Theme { Theme.anime }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -68,9 +68,9 @@ struct LogPanel: View {
     let entries: [LogEntry]
     var grouped: [ModuleReport]?
     var scrollable = true
-    @ObservedObject var themeManager: ThemeManager
 
-    private var theme: Theme { themeManager.currentTheme }
+
+    private var theme: Theme { Theme.anime }
     private var trailingPadding: CGFloat { theme.mascot.isVisible ? 102 : 16 }
 
     var body: some View {
@@ -193,9 +193,9 @@ struct ResultPanel: View {
     let report: CleanReport
     let title: String
     let size: (value: String, unit: String)
-    @ObservedObject var themeManager: ThemeManager
 
-    private var theme: Theme { themeManager.currentTheme }
+
+    private var theme: Theme { Theme.anime }
 
     var body: some View {
         VStack(spacing: 0) {

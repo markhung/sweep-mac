@@ -94,22 +94,13 @@ struct SweepGlyphLines: Shape {
 struct BrandMark: View {
     var width: CGFloat = 74
     var height: CGFloat = 16.2
-    @ObservedObject var themeManager: ThemeManager
-
-    private var theme: Theme { themeManager.currentTheme }
+    private var theme: Theme { Theme.anime }
     private var scale: CGFloat { min(width / 505, height / 100) }
     private var outerLine: CGFloat { 34 * scale }
     private var innerLine: CGFloat { 20 * scale }
 
     var body: some View {
-        ZStack {
-            switch theme.brand {
-            case .anime:
-                animeBrand
-            case .minimal:
-                minimalBrand
-            }
-        }
+        animeBrand
         .frame(width: width, height: height)
     }
 
@@ -129,11 +120,6 @@ struct BrandMark: View {
         .shadow(color: Color(hex: 0xF2549B, alpha: 0.38), radius: 1.2, x: 0, y: 1.6)
     }
 
-    private var minimalBrand: some View {
-        SweepGlyphLines()
-            .stroke(style: StrokeStyle(lineWidth: outerLine, lineCap: .round, lineJoin: .round))
-            .foregroundStyle(theme.colors.brand)
-    }
 }
 
 // MARK: - 进度环

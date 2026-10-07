@@ -2,7 +2,6 @@ import SwiftUI
 
 struct MainView: View {
     @ObservedObject var appState: AppState
-    @ObservedObject var themeManager: ThemeManager
 
     private let windowSize = CGSize(width: 420, height: 600)
     private let titleBarHeight: CGFloat = 44
@@ -10,7 +9,7 @@ struct MainView: View {
     ///  - 释放行19 - 面板上边距12 - 按钮51 - 下18 = 202
     private let panelHeight: CGFloat = 202
 
-    private var theme: Theme { themeManager.currentTheme }
+    private var theme: Theme { Theme.anime }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -20,7 +19,7 @@ struct MainView: View {
                 titleBar
 
                 VStack(spacing: 0) {
-                    DialView(state: appState, themeManager: themeManager) { appState.start() }
+                    DialView(state: appState) { appState.start() }
                         .frame(height: 196)
 
                     bubbleRow
@@ -35,7 +34,7 @@ struct MainView: View {
 
             // 右下角 mascot（按主题显隐）
             if theme.mascot.isVisible {
-                MascotView(pose: appState.pose, themeManager: themeManager)
+                MascotView(pose: appState.pose)
                     .padding(.trailing, 6)
                     .padding(.bottom, 6)
                     .allowsHitTesting(false)
@@ -44,7 +43,7 @@ struct MainView: View {
 
             // 首次启动的权限引导覆盖层（全屏盖住主界面）
             if appState.showOnboarding {
-                OnboardingView(appState: appState, themeManager: themeManager)
+                OnboardingView(appState: appState)
                     .transition(.opacity)
             }
         }
@@ -116,14 +115,7 @@ struct MainView: View {
 
     private var titleBar: some View {
         ZStack {
-            HStack {
-                Spacer()
-                ThemeSwitcher(themeManager: themeManager)
-                    .padding(.trailing, 12)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            BrandMark(width: 74, height: 16.2, themeManager: themeManager)
+            BrandMark(width: 74, height: 16.2)
                 .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity)
@@ -138,7 +130,7 @@ struct MainView: View {
     // MARK: - 气泡 + 实时释放量
 
     private var bubbleRow: some View {
-        BubbleView(text: appState.bubbleText, themeManager: themeManager)
+        BubbleView(text: appState.bubbleText)
             .frame(height: 36)
             .padding(.top, 6)
     }
@@ -173,21 +165,20 @@ struct MainView: View {
     private var panel: some View {
         ZStack {
             if appState.showDetail, !appState.reports.isEmpty {
-                LogPanel(entries: appState.entries, grouped: appState.reports, themeManager: themeManager)
+                LogPanel(entries: appState.entries, grouped: appState.reports)
             } else {
                 switch appState.phase {
                 case .idle, .failed:
-                    HintPanel(themeManager: themeManager)
+                    HintPanel()
                 case .running:
-                    LogPanel(entries: appState.entries, grouped: nil, themeManager: themeManager)
+                    LogPanel(entries: appState.entries, grouped: nil)
                 case .done:
                     if let report = appState.report {
                         ResultPanel(report: report,
                                     title: appState.resultTitle,
-                                    size: appState.resultSize,
-                                    themeManager: themeManager)
+                                    size: appState.resultSize)
                     } else {
-                        LogPanel(entries: appState.entries, grouped: nil, themeManager: themeManager)
+                        LogPanel(entries: appState.entries, grouped: nil)
                     }
                 }
             }

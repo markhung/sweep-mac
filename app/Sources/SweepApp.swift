@@ -5,7 +5,6 @@ import AppKit
 struct SweepApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var appState = AppState()
-    @StateObject private var themeManager = ThemeManager()
 
     init() {
         // 尽早注册随包圆体，确保 SwiftUI 渲染前字体已可用
@@ -15,7 +14,7 @@ struct SweepApp: App {
 
     var body: some Scene {
         WindowGroup("Sweep") {
-            MainView(appState: appState, themeManager: themeManager)
+            MainView(appState: appState)
                 .fixedSize()
                 .onAppear { appState.bootstrapPermission() }
         }
@@ -24,29 +23,6 @@ struct SweepApp: App {
         .commands {
             // 这是单窗口工具，不需要「新建」
             CommandGroup(replacing: .newItem) {}
-
-            CommandMenu("主题") {
-                Picker("主题", selection: Binding(
-                    get: { themeManager.selectedTheme },
-                    set: { themeManager.selectTheme($0) }
-                )) {
-                    Text("猫系主题").tag(AppTheme.anime)
-                    Text("极简科技").tag(AppTheme.minimal)
-                }
-                .pickerStyle(.inline)
-
-                Menu("极简科技外观") {
-                    Picker("外观", selection: Binding(
-                        get: { themeManager.minimalColorScheme },
-                        set: { themeManager.setMinimalColorScheme($0) }
-                    )) {
-                        Text("浅色").tag(MinimalColorScheme.light)
-                        Text("深色").tag(MinimalColorScheme.dark)
-                        Text("自动").tag(MinimalColorScheme.system)
-                    }
-                    .pickerStyle(.inline)
-                }
-            }
         }
     }
 }
@@ -63,28 +39,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SweepFont.registerBundledFont()
         SweepFont.prewarmBundledFont()
 
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(themeDidChange(_:)),
-            name: .sweepThemeDidChange,
-            object: nil
-        )
-
-        // 启动时按已保存主题设置 Dock 图标
-        let tm = ThemeManager()
-        applyDockIcon(name: tm.currentTheme.dockIconName)
+        // 启动时为 Dock 设置猫系图标
+        applyDockIcon(name: "Sweep")
 
         if isSelfTest { runSelfTest() }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
-    }
-
-    @objc private func themeDidChange(_ notification: Notification) {
-        if let name = notification.object as? String {
-            applyDockIcon(name: name)
-        }
     }
 
     private func applyDockIcon(name: String) {

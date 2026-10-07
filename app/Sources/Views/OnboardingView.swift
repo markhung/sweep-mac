@@ -4,13 +4,13 @@ import AppKit
 /// 首次启动的「完全磁盘访问权限」引导覆盖层：四屏
 /// ① 欢迎 → ② 权限说明 → ③ 授权操作 → ④ 完成。
 ///
-/// 视觉默认采用极简科技风格，只做一套。
+/// 猫系主题风格，仅一套引导。
 struct OnboardingView: View {
 
     @ObservedObject var appState: AppState
-    @ObservedObject var themeManager: ThemeManager
 
-    private var theme: Theme { themeManager.currentTheme }
+
+    private var theme: Theme { Theme.anime }
 
     // MARK: - 手工 State
 
@@ -26,9 +26,8 @@ struct OnboardingView: View {
         nonmutating set { _settingsHint.wrappedValue = newValue }
     }
 
-    init(appState: AppState, themeManager: ThemeManager, initialStep: Int = 0) {
+    init(appState: AppState, initialStep: Int = 0) {
         self.appState = appState
-        self.themeManager = themeManager
         self._step = State(initialValue: min(max(initialStep, 0), OnboardingView.totalSteps - 1))
     }
 
@@ -217,24 +216,24 @@ struct OnboardingView: View {
         VStack(spacing: 10) {
             switch step {
             case 0:
-                PrimaryButton(title: "开始吧", themeManager: themeManager) { go(to: 1) }
-                SecondaryButton(title: "跳过", themeManager: themeManager) { finish() }
+                PrimaryButton(title: "开始吧") { go(to: 1) }
+                SecondaryButton(title: "跳过") { finish() }
 
             case 1:
-                PrimaryButton(title: "开启吧", themeManager: themeManager) { go(to: 2) }
-                SecondaryButton(title: "跳过", themeManager: themeManager) { finish() }
+                PrimaryButton(title: "开启吧") { go(to: 2) }
+                SecondaryButton(title: "跳过") { finish() }
 
             case 2:
-                PrimaryButton(title: "打开系统设置", themeManager: themeManager) { openSettings() }
-                SecondaryButton(title: "重新检测", themeManager: themeManager) { appState.refreshPermissionStatus() }
-                LinkButton(title: "完成设置", themeManager: themeManager) { go(to: 3) }
+                PrimaryButton(title: "打开系统设置") { openSettings() }
+                SecondaryButton(title: "重新检测") { appState.refreshPermissionStatus() }
+                LinkButton(title: "完成设置") { go(to: 3) }
 
             default:
                 if grantedStatus {
-                    PrimaryButton(title: "开始使用", themeManager: themeManager) { finish() }
+                    PrimaryButton(title: "开始使用") { finish() }
                 } else {
-                    PrimaryButton(title: "重启 Sweep", themeManager: themeManager) { FullDiskAccess.relaunchApp() }
-                    SecondaryButton(title: "跳过", themeManager: themeManager) { finish() }
+                    PrimaryButton(title: "重启 Sweep") { FullDiskAccess.relaunchApp() }
+                    SecondaryButton(title: "跳过") { finish() }
                 }
             }
         }
@@ -296,10 +295,10 @@ struct OnboardingView: View {
 
 private struct PrimaryButton: View {
     let title: String
-    @ObservedObject var themeManager: ThemeManager
+
     let action: () -> Void
 
-    private var theme: Theme { themeManager.currentTheme }
+    private var theme: Theme { Theme.anime }
 
     var body: some View {
         Button(action: action) {
@@ -320,10 +319,10 @@ private struct PrimaryButton: View {
 
 private struct SecondaryButton: View {
     let title: String
-    @ObservedObject var themeManager: ThemeManager
+
     let action: () -> Void
 
-    private var theme: Theme { themeManager.currentTheme }
+    private var theme: Theme { Theme.anime }
 
     var body: some View {
         Button(action: action) {
@@ -347,10 +346,10 @@ private struct SecondaryButton: View {
 
 private struct LinkButton: View {
     let title: String
-    @ObservedObject var themeManager: ThemeManager
+
     let action: () -> Void
 
-    private var theme: Theme { themeManager.currentTheme }
+    private var theme: Theme { Theme.anime }
 
     var body: some View {
         Button(action: action) {

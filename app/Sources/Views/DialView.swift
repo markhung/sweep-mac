@@ -4,12 +4,12 @@ import SwiftUI
 
 struct DialView: View {
     @ObservedObject var state: AppState
-    @ObservedObject var themeManager: ThemeManager
+
     var onTap: () -> Void
 
     private let size: CGFloat = 196
     private var clickable: Bool { state.phase == .idle || state.phase == .done }
-    private var theme: Theme { themeManager.currentTheme }
+    private var theme: Theme { Theme.anime }
 
     var body: some View {
         ZStack {
@@ -171,9 +171,9 @@ private struct RotatingHalo: View {
 
 struct MascotView: View {
     let pose: Pose
-    @ObservedObject var themeManager: ThemeManager
 
-    private var theme: Theme { themeManager.currentTheme }
+
+    private var theme: Theme { Theme.anime }
 
     /// 静态缓存：MainView 运行期间每秒刷新多次，
     /// 不能每次 body 都去磁盘解码 PNG
@@ -252,9 +252,9 @@ struct MascotView: View {
 
 struct BubbleView: View {
     let text: String
-    @ObservedObject var themeManager: ThemeManager
 
-    private var theme: Theme { themeManager.currentTheme }
+
+    private var theme: Theme { Theme.anime }
 
     var body: some View {
         Text(text)
