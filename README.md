@@ -24,59 +24,6 @@ macOS 深度清理工具 Sweep 的原生 GUI，封装开源命令行清理引擎
 2. 双击挂载 DMG，把 `Sweep.app` 拖到「应用程序」。
 3. 首次打开请在 Finder 中右键 `Sweep.app` →「打开」，并在「系统设置 → 隐私与安全性」中允许。
 
-## 构建
-
-需要 macOS Command Line Tools：
-
-```bash
-cd app
-./build.sh          # 编译 Sweep.app（含内置引擎与素材装配、ad-hoc 签名）
-./package-dmg.sh    # 打包成 Sweep.dmg
-```
-
-产物位于 `app/build/Sweep.app` 与 `app/build/Sweep.dmg`。
-
-## 测试
-
-```bash
-cd app
-
-# 解析器回归 + 分片一致性测试
-# 注意：测试文件含顶层语句，不能用 -parse-as-library；
-# 也只需编译解析器依赖的最小集合，避免混入带 @main 入口的 App 源码。
-swiftc -O -target arm64-apple-macos13.0 \
-  Sources/Models.swift Sources/MoleText.swift Sources/StreamParser.swift \
-  Tests/parser/main.swift \
-  -o build/parse_test && ./build/parse_test
-
-# FDA 权限判定单元测试
-swiftc -O -target arm64-apple-macos13.0 \
-  Sources/Permission.swift Tests/permission/main.swift \
-  -o build/permission_test && ./build/permission_test
-
-# 离屏快照自检：把真实引擎输出喂进 AppState，渲染全部视图状态为 PNG
-# （含主界面四态、权限引导四屏、设置视图，用于和设计稿逐张比对）
-SRC=$(ls Sources/*.swift | grep -v SweepApp.swift)
-swiftc -O -parse-as-library -swift-version 5 -target arm64-apple-macos13.0 \
-  ${=SRC} Sources/Views/*.swift Tests/render/RenderMain.swift \
-  -o build/render_check
-./build/render_check /tmp/sweep-dryrun.txt build/snapshots
-
-# QA UI 级行为验证：权限引导状态机、提示条互斥、遮挡证明、字体子集覆盖
-swiftc -O -parse-as-library -swift-version 5 -target arm64-apple-macos13.0 \
-  ${=SRC} Sources/Views/*.swift Tests/qa_ui/main.swift \
-  -o build/qa_ui && ./build/qa_ui
-
-# 真实 bundle 环境自检（预览模式跑一遍引擎，不删文件）
-./build/Sweep.app/Contents/MacOS/Sweep --selftest
-```
-
-## 安全模型
-
-- 全程无网络代码；清理动作全部在捆绑引擎内完成，进程为参数数组式调用，无 shell 插值。
-- 仅用户级权限，不索要管理员密码；删除范围由系统权限（完全磁盘访问）决定，不开放逐类勾选。
-- 引擎输出仅用于展示层渲染，不参与任何后续删除目标的构造。
-
 ## 开源合规
 
 本项目基于 [Mole](https://github.com/tw93/Mole)（GPL-3.0）构建。Mole 的源码副本位于：
