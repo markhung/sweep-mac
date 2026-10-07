@@ -57,6 +57,16 @@ final class AppState: ObservableObject {
         didSet { UserDefaults.standard.set(showInMenuBar, forKey: "Sweep.showInMenuBar") }
     }
 
+    /// 设置面板是否打开（与主界面互斥的视图切换，非持久）
+    @Published var showSettings = false
+
+    /// 清理范围（首屏胶囊 + 明细逐类），与设计稿 CATS 一致
+    let categories: [String] = [
+        "系统缓存", "应用缓存", "Xcode 派生数据", "用户缓存", "日志文件",
+        "缩略图缓存", "浏览器缓存", "邮件下载", "iOS 备份", "下载项残留",
+        "剪贴板历史", "字体缓存", "系统日志", "翻译缓存"
+    ]
+
     // MARK: - 首次启动的权限引导
 
     /// 引导覆盖层是否展示

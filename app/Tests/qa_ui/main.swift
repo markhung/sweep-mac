@@ -175,7 +175,7 @@ struct QAUI {
         ov.applyDetectedPermission(.denied)
         ov.showOnboarding = true
         render(MainView(appState: ov), to: tmp + "/qa-overlay-on.png")
-        render(OnboardingView(appState: ov, initialStep: 0), to: tmp + "/qa-onboard-only.png")
+        render(OnboardingView(appState: ov), to: tmp + "/qa-onboard-only.png")
         ov.showOnboarding = false
         render(MainView(appState: ov), to: tmp + "/qa-overlay-off.png")
 

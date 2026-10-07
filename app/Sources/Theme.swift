@@ -29,6 +29,7 @@ struct ThemeColors {
     let text0: Color
     let text1: Color
     let text2: Color
+    let text3: Color
     let accent: Color
     let accent2: Color
     let track: Color
@@ -107,6 +108,7 @@ extension Theme {
                 text0:     Color(hex: 0x4A3F55),
                 text1:     Color(hex: 0x9B8AA9),
                 text2:     Color(hex: 0xC3B4CF),
+                text3:     Color(hex: 0xC3B4CF),
                 accent:    c1,
                 accent2:   c2,
                 track:     Color(hex: 0xF9EDF5),
@@ -168,6 +170,7 @@ extension Theme {
                 text0:      Color(hex: 0xF5F4F1),
                 text1:      Color(hex: 0xF5F4F1, alpha: 0.68),
                 text2:      Color(hex: 0xF5F4F1, alpha: 0.50),
+                text3:      Color(hex: 0xF5F4F1, alpha: 0.50),
                 accent:     amber,
                 accent2:    amberLo,
                 track:      Color(hex: 0x26262D),

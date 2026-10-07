@@ -76,7 +76,7 @@ struct RenderCheck {
             let st = AppState()
             st.applyDetectedPermission(s == 3 ? .granted : .denied)
             st.showOnboarding = true
-            snapshot(OnboardingView(appState: st, initialStep: s),
+            snapshot(OnboardingView(appState: st),
                      onboardNames[i], outDir: outDir)
         }
 
@@ -84,7 +84,7 @@ struct RenderCheck {
         let restartState = AppState()
         restartState.applyDetectedPermission(.denied)
         restartState.showOnboarding = true
-        snapshot(OnboardingView(appState: restartState, initialStep: 3),
+        snapshot(OnboardingView(appState: restartState),
                  "15-onboard-4-restart", outDir: outDir)
 
         // ── 7. 未授权时的主界面常驻提示条（引导已看过、不再自动弹）
