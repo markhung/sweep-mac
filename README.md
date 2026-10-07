@@ -87,8 +87,3 @@ swiftc -O -parse-as-library -swift-version 5 -target arm64-apple-macos13.0 \
 Sweep 本身亦以 **GPL-3.0** 开源，详见 [LICENSE](LICENSE)。
 
 根据 Mole 的 [TRADEMARK.md](mole-src/TRADEMARK.md)，本项目未使用 "Mole" 名称或图标，也不暗示任何官方背书。
-
-## 第三方素材
-
-- 圆体：「站酷庆科黄油体」(ZCOOL QingKe HuangYou)，OFL 开源字体（随包分发，当前主题未启用）。
-- 猫系少女立绘与背景：AI 生成，仅用于本项目（当前主题未启用）。
