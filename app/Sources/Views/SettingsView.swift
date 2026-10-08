@@ -64,6 +64,11 @@ struct SettingsView: View {
                         amberSwitch(Binding(get: { appState.launchAtLogin },
                                             set: { appState.launchAtLogin = $0 }))
                     }
+                    srow(icon: "bell.badge", name: "更新提醒",
+                         desc: "每次打开时自动检查新版本") {
+                        amberSwitch(Binding(get: { appState.updateReminder },
+                                            set: { appState.updateReminder = $0 }))
+                    }
                     srow(icon: "person.crop.circle", name: "登录",
                          desc: "正在开发中，敬请期待") {
                         devBadge

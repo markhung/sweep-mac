@@ -20,8 +20,10 @@ struct SweepApp: App {
                 .fixedSize()
                 .onAppear {
                     appState.bootstrapPermission()
-                    // 启动静默检查更新（24h 节流；--selftest 不联网）
-                    updateService.startupCheckIfNeeded()
+                    // 启动静默检查更新（受「更新提醒」开关门控；24h 节流、--selftest 不联网均在内部处理）
+                    if appState.updateReminder {
+                        updateService.startupCheckIfNeeded()
+                    }
                     // 把 openWindow 动作交给 AppDelegate，供状态项菜单唤起主窗口
                     delegate.openWindowAction = openWindow
                 }

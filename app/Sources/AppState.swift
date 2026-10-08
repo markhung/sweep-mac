@@ -59,6 +59,14 @@ final class AppState: ObservableObject {
             LoginController.setLaunchAtLogin(launchAtLogin)
         }
     }
+    /// 更新提醒：开启时每次启动 App 自动静默检查新版本；关闭后仅可手动检查。
+    /// 默认开启（「未设置」时按 true 还原），保留原有主动检测体验。
+    @Published var updateReminder: Bool = true {
+        didSet {
+            guard oldValue != updateReminder else { return }
+            UserDefaults.standard.set(updateReminder, forKey: "Sweep.updateReminder")
+        }
+    }
     // 「菜单栏常驻」不在这里持有 @Published：它由 AppDelegate 的裸
     // NSStatusItem 直接读持久化键 "Sweep.showInMenuBar"。之前的
     // MenuBarExtra(isInserted:) 场景会和 NSStatusItemScene 互相触发
@@ -134,6 +142,9 @@ final class AppState: ObservableObject {
         }
         deleteMode = DeleteMode(rawValue: UserDefaults.standard.string(forKey: "Sweep.deleteMode") ?? "") ?? .direct
         launchAtLogin = UserDefaults.standard.bool(forKey: "Sweep.launchAtLogin")
+        updateReminder = UserDefaults.standard.object(forKey: "Sweep.updateReminder") != nil
+            ? UserDefaults.standard.bool(forKey: "Sweep.updateReminder")
+            : true
     }
 
     // MARK: - 权限引导
