@@ -291,10 +291,13 @@ final class AppState: ObservableObject {
             currentModuleEN = nameEN
             moduleStart = Date()
             let cn = MoleText.section(nameEN)
-            let start = (cumulativeBefore[nameEN] ?? min(targetPercent, 0.96))
-            targetPercent = start
-            // 模块刚开始时不让指针倒退
-            displayPercent = max(displayPercent, start)
+            // 模块边界来自真实 ➤ 事件：把目标推到本模块的起点。
+            // 不许回退，也不把读数直接吸到边界——之前 displayPercent =
+            // max(display, start) 会让前面模块很快结束时读数瞬间跳到
+            // 最后一个模块的 99%（实际还在清理）。只动 target，
+            // 让 tick 里的阻尼跟随把读数平滑滑过去。
+            let boundary = min(cumulativeBefore[nameEN] ?? targetPercent, 0.96)
+            targetPercent = max(targetPercent, boundary)
             bubbleText = MoleText.quip(for: cn)
             appendReportHeader(cn)
             // 模块标题进日志流（mole 的 ➤ 行），供「清理明细」滚动展示
@@ -389,17 +392,21 @@ final class AppState: ObservableObject {
 
         if phase == .running {
             // 模块内部的推进目标：时间饱和曲线，最多推进到本模块带宽的 88%，
-            // 剩下的留给「模块真正结束」这个真实事件
+            // 剩下的留给「模块真正结束」这个真实事件。
+            // 运行期整体封顶 96%：逼近 100% 是完成态的仪式，不提前预支。
             let inModule = now.timeIntervalSince(moduleStart)
             let intra = min(1 - exp(-inModule / 6.5), 0.88)
 
             let start = targetPercent
-            let end = nextBoundary(after: currentModuleEN)
+            let end = max(start, nextBoundary(after: currentModuleEN))
             let target = start + (end - start) * intra
 
-            // 阻尼跟随：帧率无关
-            displayPercent += (target - displayPercent) * (1 - exp(-dt * 3.4))
-            percent = min(displayPercent, 0.995)
+            // 阻尼跟随 + 限速：阻尼负责平滑收敛，限速保证快模块连发时
+            // 读数仍是肉眼连续的滑行（最快 30%/秒），不出现甩表式跳变
+            let step = (target - displayPercent) * (1 - exp(-dt * 3.4))
+            let maxStep = dt * 0.30
+            displayPercent += max(-maxStep, min(step, maxStep))
+            percent = min(displayPercent, 0.96)
         } else if phase == .done {
             displayPercent += (1 - displayPercent) * (1 - exp(-dt * 4.5))
             percent = min(displayPercent, 1)
@@ -407,12 +414,15 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// 本模块结束时应到达的累计进度
+    /// 本模块结束时应到达的累计进度（运行期统一封顶 96%）
     private func nextBoundary(after nameEN: String?) -> Double {
-        guard let name = nameEN else { return 0.06 }
-        let before = cumulativeBefore[name] ?? 0
+        guard let name = nameEN else { return min(targetPercent + 0.03, 0.96) }
+        guard let before = cumulativeBefore[name] else {
+            // 不在权重表里的模块：从当前位置再走一小段，不回退
+            return min(targetPercent + 0.03, 0.96)
+        }
         let weight = Self.moduleWeights[name] ?? 2
-        return min((before + weight) / 100, 0.995)
+        return min((before + weight) / 100, 0.96)
     }
 
     private func animateToFull() {
