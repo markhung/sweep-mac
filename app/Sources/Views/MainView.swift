@@ -6,6 +6,7 @@ import AppKit
 /// 与引导、设置互斥切换；强制停止用窗口内 sheet。
 struct MainView: View {
     @ObservedObject var appState: AppState
+    @ObservedObject var updateService: UpdateService
     private var theme: Theme { Theme.current }
 
     private var _showStopConfirm = State(initialValue: false)
@@ -42,12 +43,19 @@ struct MainView: View {
         .frame(width: 468, height: 740)
         .background(theme.colors.bg)
         .onAppear { appState.bootstrapPermission() }
+        // 浮层互斥：任何时刻只留一个。开始清理或弹停止确认时收起更新浮层
+        .onChange(of: appState.phase) { phase in
+            if phase.isRunning || showStopConfirm { closeUpdatePopover() }
+        }
+        .onChange(of: showStopConfirm) { shown in
+            if shown { closeUpdatePopover() }
+        }
         .onExitCommand {
             // Esc 分层：每次只收最上面一层（确认层 → 更新浮层 → 设置）
             if showStopConfirm {
                 showStopConfirm = false
             } else if showUpdate {
-                showUpdate = false
+                closeUpdatePopover()
             } else if appState.showSettings {
                 appState.showSettings = false
             }
@@ -97,7 +105,8 @@ struct MainView: View {
             Rectangle().fill(theme.colors.borderSoft).frame(height: 1)
         }
     }
-    /// 版本号入口（设计稿 .ver）：点击打开检查更新浮层
+    /// 版本号入口（设计稿 .ver）：点击打开检查更新浮层；
+    /// 有已报未装的新版本时挂琥珀点（5px 实心 + 11px 光环，同标题栏圆点规格）
     private var versionButton: some View {
         Button {
             showUpdate = true
@@ -112,9 +121,24 @@ struct MainView: View {
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .fill(Color.white.opacity(0.001))
                 )
+                .overlay(alignment: .topTrailing) {
+                    if updateService.hasPendingUpdate {
+                        Circle().fill(theme.colors.warn)
+                            .frame(width: 5, height: 5)
+                            .background(Circle().fill(theme.colors.warn.opacity(0.18))
+                                .frame(width: 11, height: 11))
+                            .offset(x: 4, y: -2)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .help("Sweep v\(appState.appVersion) · 检查更新")
+    }
+
+    /// 关闭更新浮层并作废在途的手动检查回调（启动静默检查不受影响）
+    private func closeUpdatePopover() {
+        showUpdate = false
+        updateService.cancelInFlightManual()
     }
 
     /// 检查更新浮层：标题栏附属的非模态层。透明捕获层负责「点空白关闭」，
@@ -125,12 +149,14 @@ struct MainView: View {
                 .fill(Color.clear)
                 .contentShape(Rectangle())
                 .frame(width: 468, height: 740)
-                .onTapGesture { showUpdate = false }
+                .onTapGesture { closeUpdatePopover() }
                 .accessibilityHidden(true)
             VStack(spacing: 0) {
                 HStack {
                     Spacer()
-                    UpdateSheet(appState: appState, isPresented: showUpdateBinding)
+                    UpdateSheet(appState: appState,
+                                updateService: updateService,
+                                isPresented: showUpdateBinding)
                         .padding(.top, 39)      // 箭头尖落在版本号下缘
                         .padding(.trailing, 16)
                 }

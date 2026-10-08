@@ -174,10 +174,10 @@ struct QAUI {
         let ov = AppState()
         ov.applyDetectedPermission(.denied)
         ov.showOnboarding = true
-        render(MainView(appState: ov), to: tmp + "/qa-overlay-on.png")
+        render(MainView(appState: ov, updateService: UpdateService()), to: tmp + "/qa-overlay-on.png")
         render(OnboardingView(appState: ov), to: tmp + "/qa-onboard-only.png")
         ov.showOnboarding = false
-        render(MainView(appState: ov), to: tmp + "/qa-overlay-off.png")
+        render(MainView(appState: ov, updateService: UpdateService()), to: tmp + "/qa-overlay-off.png")
 
         let d1 = diffCount(tmp + "/qa-overlay-on.png", tmp + "/qa-onboard-only.png")
         check("D15 引导开启时主界面被完全盖住（与纯引导渲染 0 差异，差异=\(d1)）", d1 == 0)
@@ -223,7 +223,7 @@ struct QAUI {
         let ds = AppState()
         ds.applyDetectedPermission(.granted)
         ds.enterRunningVisual(percent: 0.62)
-        render(MainView(appState: ds), to: tmp + "/qa-designsystem.png")
+        render(MainView(appState: ds, updateService: UpdateService()), to: tmp + "/qa-designsystem.png")
         let dsExists = FileManager.default.fileExists(atPath: tmp + "/qa-designsystem.png")
         check("设计系统主题可渲染（隐藏主题冒烟通过）", dsExists)
         Theme.selected = .designSystem

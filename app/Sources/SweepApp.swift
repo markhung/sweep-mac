@@ -5,6 +5,7 @@ import AppKit
 struct SweepApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var appState = AppState()
+    @StateObject private var updateService = UpdateService()
     @Environment(\.openWindow) private var openWindow
 
     init() {
@@ -15,10 +16,12 @@ struct SweepApp: App {
 
     var body: some Scene {
         WindowGroup(id: "main") {
-            MainView(appState: appState)
+            MainView(appState: appState, updateService: updateService)
                 .fixedSize()
                 .onAppear {
                     appState.bootstrapPermission()
+                    // 启动静默检查更新（24h 节流；--selftest 不联网）
+                    updateService.startupCheckIfNeeded()
                     // 把 openWindow 动作交给 AppDelegate，供状态项菜单唤起主窗口
                     delegate.openWindowAction = openWindow
                 }

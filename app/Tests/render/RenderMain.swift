@@ -38,7 +38,7 @@ struct RenderCheck {
         print("解析到 \(events.count) 个事件，来源 \(sourcePath)")
 
         // ── 1. 待机态
-        snapshot(MainView(appState: AppState()), "01-idle", outDir: outDir)
+        snapshot(MainView(appState: AppState(), updateService: UpdateService()), "01-idle", outDir: outDir)
 
         // ── 2. 运行中：喂真实事件，停在「开发者工具」模块之前
         let running = AppState()
@@ -47,17 +47,17 @@ struct RenderCheck {
             running.handleStream(event)
         }
         running.enterRunningVisual(percent: 0.42)
-        snapshot(MainView(appState: running), "02-running", outDir: outDir)
+        snapshot(MainView(appState: running, updateService: UpdateService()), "02-running", outDir: outDir)
 
         // ── 3. 完成态：喂完全部事件 + 汇总
         let done = AppState()
         for event in events { done.handleStream(event) }
         done.finish(summary: parser.summary, code: 0, cancelled: false)
-        snapshot(MainView(appState: done), "03-done", outDir: outDir)
+        snapshot(MainView(appState: done, updateService: UpdateService()), "03-done", outDir: outDir)
 
         // ── 4. 详情态（按模块分组的日志）
         done.showDetail = true
-        snapshot(MainView(appState: done), "04-detail", outDir: outDir)
+        snapshot(MainView(appState: done, updateService: UpdateService()), "04-detail", outDir: outDir)
 
         // ── 5. 诊断：日志行在无滚动容器时能否渲染
         let plain = VStack(alignment: .leading, spacing: 4) {
@@ -97,7 +97,7 @@ struct RenderCheck {
         let bannerState = AppState()
         bannerState.applyDetectedPermission(.denied)
         bannerState.showOnboarding = false
-        snapshot(MainView(appState: bannerState), "14-main-banner", outDir: outDir)
+        snapshot(MainView(appState: bannerState, updateService: UpdateService()), "14-main-banner", outDir: outDir)
 
         // ── 8. 设置视图（含未授权态的「去授权」行）
         let settingsState = AppState()
