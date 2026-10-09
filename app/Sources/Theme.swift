@@ -26,6 +26,12 @@ struct ThemeColors {
     let elev2: Color
     let border: Color
     let borderSoft: Color
+    /// 浮层/弹窗描边：比窗口更清楚（浅色 #DEDCD3 / 深色 #2E2E37）
+    let borderPop: Color
+    /// 模态遮罩（停止确认等）
+    let scrim: Color
+    /// 底部渐隐遮罩（明细区底）
+    let scrimBottom: Color
     let text0: Color
     let text1: Color
     let text2: Color
@@ -105,6 +111,9 @@ extension Theme {
                 elev2:     Color(hex: 0xFBE3EF),
                 border:    Color(hex: 0xFFDCEB),
                 borderSoft:Color(hex: 0xFFE9F3),
+                borderPop:  Color(hex: 0xE9C2DA),
+                scrim:      Color(hex: 0x3A2A33, alpha: 0.60),
+                scrimBottom:Color(hex: 0x000000, alpha: 0.22),
                 text0:     Color(hex: 0x4A3F55),
                 text1:     Color(hex: 0x9B8AA9),
                 text2:     Color(hex: 0xC3B4CF),
@@ -167,6 +176,9 @@ extension Theme {
                 elev2:      Color(hex: 0x1B1B20),
                 border:     Color(hex: 0x26262D),
                 borderSoft: Color(hex: 0x1E1E24),
+                borderPop:  Color(hex: 0x2E2E37),
+                scrim:      Color(hex: 0x060608, alpha: 0.62),
+                scrimBottom:Color(hex: 0x000000, alpha: 0.22),
                 text0:      Color(hex: 0xF5F4F1),
                 text1:      Color(hex: 0xF5F4F1, alpha: 0.68),
                 text2:      Color(hex: 0xF5F4F1, alpha: 0.50),
@@ -213,6 +225,74 @@ extension Theme {
         )
     }()
 
+    // MARK: - 设计系统·浅色（基于 Sweep 设计系统 v1.0 的 :root[data-theme="light"]）
+    ///
+    /// 与 designSystem 同属一套设计语言，仅配色翻转为浅色。外观（跟随系统/浅色/深色）
+    /// 由 AppState.appearance 控制，Theme.current 据此在 designSystem / designSystemLight 间切换。
+    static let designSystemLight: Theme = {
+        let amber   = Color(hex: 0xFFA91E)
+        let amberHi = Color(hex: 0xFFC868)
+        let amberLo = Color(hex: 0xF59A0C)
+        let mint    = Color(hex: 0x0B7C4C)
+        let mintHi  = Color(hex: 0x12915A)
+
+        return Theme(
+            colors: ThemeColors(
+                bg:         Color(hex: 0xFCFBF8),
+                panel:      Color(hex: 0xF5F3ED),
+                elev:       Color(hex: 0xFFFFFF),
+                elev2:      Color(hex: 0xF3F1EA),
+                border:     Color(hex: 0xD8D6CE),
+                borderSoft: Color(hex: 0xECEAE2),
+                borderPop:  Color(hex: 0xDEDCD3),
+                scrim:      Color(hex: 0x16181C, alpha: 0.30),
+                scrimBottom:Color(hex: 0x000000, alpha: 0.10),
+                text0:      Color(hex: 0x16181C),
+                text1:      Color(hex: 0x16181C, alpha: 0.74),
+                text2:      Color(hex: 0x16181C, alpha: 0.64),
+                text3:      Color(hex: 0x16181C, alpha: 0.64),
+                accent:     amber,
+                accent2:    amberLo,
+                track:      Color(hex: 0xE6E3DC),
+                ok:         mint,
+                okGlow:     Color(hex: 0x0B7C4C, alpha: 0.45),
+                warn:       amberHi,
+                glow:       Color(hex: 0xFFA91E, alpha: 0.18),
+                ringRun:    LinearGradient(colors: [amberHi, amberLo],
+                                          startPoint: .topLeading, endPoint: .bottomTrailing),
+                ringDone:   LinearGradient(colors: [mint, mintHi],
+                                          startPoint: .topLeading, endPoint: .bottomTrailing),
+                primaryBtn: LinearGradient(colors: [amberHi, amberLo],
+                                          startPoint: .top, endPoint: .bottom),
+                brand:      LinearGradient(colors: [amberHi, amberLo],
+                                          startPoint: .top, endPoint: .bottom)
+            ),
+            fonts: ThemeFonts(
+                dialCenter:  { SweepFont.body($0, weight: .medium) },
+                percent:     { SweepFont.body($0, weight: .medium) },
+                percentUnit: { SweepFont.body($0, weight: .bold) },
+                body:        { SweepFont.body($0, weight: $1) }
+            ),
+            mascot: MascotConfig(
+                isVisible: false,
+                idleSize: CGSize(width: 94, height: 132),
+                cheerSize: CGSize(width: 104, height: 146),
+                doneSize: CGSize(width: 94, height: 132)
+            ),
+            dial: DialStyle(
+                showBreatheHalo: false,
+                showRotatingDashedHalo: true,
+                showSparkleHead: false,
+                haloColor: amber,
+                haloLineWidth: 2.5,
+                haloOpacity: 0.30,
+                shadowColor: Color(hex: 0xFFB224, alpha: 0.30)
+            ),
+            backgroundImageName: nil,
+            cutoutBrand: false
+        )
+    }()
+
     // MARK: - 轻量主题选择（前端不暴露切换入口）
 
     /// 可用主题。注意：UI 层不提供任何切换控件，当前始终为猫系。
@@ -226,10 +306,15 @@ extension Theme {
     static var selected: AppTheme = .designSystem
 
     /// 所有视图统一通过这里取主题，未来启用设计系统只需改 `selected`。
+    /// 解析当前应生效的主题：按 NSApp.effectiveAppearance 判断系统深浅，
+    /// 再结合 `selected`（主题家族）返回对应变体。浅色即设计系统浅色。
+    /// 当 AppState.appearance == .system 时 NSApp.appearance 为 nil，
+    /// effectiveAppearance 跟随系统；选了浅/深则被强制外观覆盖，这里无需再判分支。
     static var current: Theme {
+        let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         switch selected {
         case .anime:        return .anime
-        case .designSystem: return .designSystem
+        case .designSystem: return isDark ? .designSystem : .designSystemLight
         }
     }
 }

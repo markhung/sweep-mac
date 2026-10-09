@@ -24,7 +24,7 @@ struct UpdateSheet: View {
 
     /// 箭头：实心三角与卡片同底色，两条斜边描边与边框同色
     private var arrow: some View {
-        let borderColor = Color(hex: 0x2E2E37)
+        let borderColor = theme.colors.borderPop
         return ZStack {
             Path { p in
                 p.move(to: CGPoint(x: 0, y: 7))
@@ -209,7 +209,7 @@ private extension View {
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .fill(Theme.current.colors.elev)
                     .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .stroke(Color(hex: 0x2E2E37), lineWidth: 1))
+                        .stroke(Theme.current.colors.borderPop, lineWidth: 1))
             )
             .shadow(color: .black.opacity(0.45), radius: 16, x: 0, y: 10)
     }

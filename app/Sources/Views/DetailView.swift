@@ -289,9 +289,9 @@ struct DetailView: View {
                         .textCase(.uppercase)
                         .foregroundStyle(isStopped ? theme.colors.accent : theme.colors.ok)
                     Spacer()
-                    let gb = (appState.report?.reclaimedBytes ?? 0) / 1_000_000_000
-                    (Text(String(format: "%.2f", gb))
-                        + Text(" GB").font(.system(size: 14)).foregroundColor(theme.colors.text2))
+                    let parts = SizeFormat.split(appState.report?.reclaimedBytes ?? 0)
+                    (Text(parts.value)
+                        + Text(" " + parts.unit).font(.system(size: 14)).foregroundColor(theme.colors.text2))
                         .font(.system(size: 27, weight: .medium))
                         .monospacedDigit()
                         .tracking(-0.8)
@@ -383,11 +383,11 @@ struct DetailView: View {
     }
     private var sumMini: some View {
         HStack {
-            let gb = (appState.report?.reclaimedBytes ?? 0) / 1_000_000_000
+            let parts = SizeFormat.split(appState.report?.reclaimedBytes ?? 0)
             Text("已释放")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(theme.colors.accent)
-            Text(String(format: "%.2f GB", gb))
+            Text("\(parts.value) \(parts.unit)")
                 .font(.system(size: 11))
                 .foregroundStyle(theme.colors.text1)
             Spacer()
@@ -434,7 +434,7 @@ struct DetailView: View {
         .padding(.top, 12)
         .padding(.bottom, 16)
         .background(
-            LinearGradient(colors: [.clear, Color(hex: 0x000000, alpha: 0.22)],
+            LinearGradient(colors: [.clear, theme.colors.scrimBottom],
                            startPoint: .top, endPoint: .bottom)
         )
         .overlay(alignment: .top) {

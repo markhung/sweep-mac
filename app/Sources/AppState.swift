@@ -18,6 +18,20 @@ enum DeleteMode: String, CaseIterable {
     }
 }
 
+/// 外观：跟随系统 / 浅色 / 深色
+enum AppearanceMode: String, CaseIterable {
+    case system = "system"
+    case light = "light"
+    case dark = "dark"
+    var label: String {
+        switch self {
+        case .system: return "跟随系统"
+        case .light:  return "浅色"
+        case .dark:   return "深色"
+        }
+    }
+}
+
 /// 界面状态机 + 进度模型。
 ///
 /// 进度不是假的：模块边界来自引擎真实输出（`➤` 行），
@@ -67,6 +81,14 @@ final class AppState: ObservableObject {
             UserDefaults.standard.set(updateReminder, forKey: "Sweep.updateReminder")
         }
     }
+    /// 外观：跟随系统 / 浅色 / 深色。默认跟随系统（「未设置」时按 .system 还原）。
+    @Published var appearance: AppearanceMode = .system {
+        didSet {
+            guard oldValue != appearance else { return }
+            UserDefaults.standard.set(appearance.rawValue, forKey: "Sweep.appearance")
+            applyAppearance()
+        }
+    }
     // 「菜单栏常驻」不在这里持有 @Published：它由 AppDelegate 的裸
     // NSStatusItem 直接读持久化键 "Sweep.showInMenuBar"。之前的
     // MenuBarExtra(isInserted:) 场景会和 NSStatusItemScene 互相触发
@@ -94,6 +116,8 @@ final class AppState: ObservableObject {
 
     private let engine = CleanEngine()
     private var ticker: Timer?
+    /// 系统外观变化观察者的保活引用（不持有会被 ARC 释放，导致通知失效）
+    private var appearanceObserver: NSObjectProtocol?
     private var lastTick = Date()
 
     /// 展示用百分比（阻尼跟随 targetPercent）
@@ -145,6 +169,9 @@ final class AppState: ObservableObject {
         updateReminder = UserDefaults.standard.object(forKey: "Sweep.updateReminder") != nil
             ? UserDefaults.standard.bool(forKey: "Sweep.updateReminder")
             : true
+        appearance = AppearanceMode(rawValue: UserDefaults.standard.string(forKey: "Sweep.appearance") ?? "") ?? .system
+        applyAppearance()
+        observeSystemAppearance()
     }
 
     // MARK: - 权限引导
@@ -194,6 +221,34 @@ final class AppState: ObservableObject {
     func dismissOnboarding() {
         FullDiskAccess.markGuideSeen()
         showOnboarding = false
+    }
+
+    // MARK: - 外观
+
+    /// 把当前外观偏好应用到 NSApp：决定窗口/标题栏等系统外观。
+    /// 视图颜色由 Theme.current 依据 NSApp.effectiveAppearance 派生，无需在此处理。
+    func applyAppearance() {
+        switch appearance {
+        case .light:  NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark:   NSApp.appearance = NSAppearance(named: .darkAqua)
+        case .system: NSApp.appearance = nil
+        }
+    }
+
+    /// 监听系统外观切换：处于「跟随系统」时，系统深浅变化应立即反映到界面。
+    func observeSystemAppearance() {
+        appearanceObserver = DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("AppleInterfaceThemeChangedNotification"),
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            // 观察者在主线程队列触发，但闭包被推断为 Sendable，需显式回到 @MainActor
+            // 上下文再访问 main-actor 隔离的属性，避免编译器警告。
+            Task { @MainActor in
+                guard let self, self.appearance == .system else { return }
+                // appearance 自身未变，手动触发依赖 Theme.current 的视图重绘
+                self.objectWillChange.send()
+            }
+        }
     }
 
     // MARK: - 离屏快照自检入口

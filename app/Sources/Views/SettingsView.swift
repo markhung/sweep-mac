@@ -69,6 +69,10 @@ struct SettingsView: View {
                         amberSwitch(Binding(get: { appState.updateReminder },
                                             set: { appState.updateReminder = $0 }))
                     }
+                    srow(icon: "circle.lefthalf.filled", name: "外观",
+                         desc: "浅色、深色或跟随系统") {
+                        appearanceSegment
+                    }
                     srow(icon: "person.crop.circle", name: "登录",
                          desc: "正在开发中，敬请期待") {
                         devBadge
@@ -170,9 +174,37 @@ struct SettingsView: View {
                         RoundedRectangle(cornerRadius: 7, style: .continuous)
                             .fill(selected ? theme.colors.elev : Color.clear)
                             .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .stroke(selected ? Color.white.opacity(0.06) : .clear, lineWidth: 1))
+                                .stroke(selected ? theme.colors.border : .clear, lineWidth: 1))
                     )
                     .onTapGesture { appState.deleteMode = m }
+            }
+        }
+        .padding(2)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(theme.colors.panel)
+                .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .stroke(theme.colors.border, lineWidth: 1))
+        )
+    }
+
+    /// 外观分段控件：跟随系统 / 浅色 / 深色
+    private var appearanceSegment: some View {
+        HStack(spacing: 2) {
+            ForEach(AppearanceMode.allCases, id: \.self) { m in
+                let selected = (m == appState.appearance)
+                Text(m.label)
+                    .font(.system(size: 11.5, weight: selected ? .medium : .regular))
+                    .foregroundStyle(selected ? theme.colors.text0 : theme.colors.text2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(selected ? theme.colors.elev : Color.clear)
+                            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .stroke(selected ? theme.colors.border : .clear, lineWidth: 1))
+                    )
+                    .onTapGesture { appState.appearance = m }
             }
         }
         .padding(2)

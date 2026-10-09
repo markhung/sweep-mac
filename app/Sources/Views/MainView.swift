@@ -201,7 +201,7 @@ struct MainView: View {
 
     private var stopSheet: some View {
         ZStack {
-            Color(hex: 0x060608, alpha: 0.62)
+            theme.colors.scrim
                 .frame(width: 468, height: 740)
                 .ignoresSafeArea()
                 .onTapGesture { showStopConfirm = false }
@@ -270,7 +270,7 @@ struct MainView: View {
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .fill(theme.colors.elev)
                     .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .stroke(Color(hex: 0x2E2E37), lineWidth: 1))
+                        .stroke(theme.colors.borderPop, lineWidth: 1))
             )
         }
     }
